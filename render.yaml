@@ -1,0 +1,13 @@
+# Render Blueprint configuration for CMPDI DAMS System
+services:
+  - type: web
+    name: cmpdi-dams-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: dev
+      - key: JWT_SECRET
+        value: 9a6e8b2c4d7f1a3e5g8h0j2k4l6m8n0p2q4r6s8t0u2v4w6x8y0z2a4b6c8d0e2f

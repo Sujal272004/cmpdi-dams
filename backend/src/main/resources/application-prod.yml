@@ -1,0 +1,32 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/cmpdi_dams
+    username: postgres
+    password: Sujal@123
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 30
+      minimum-idle: 10
+      idle-timeout: 300000
+      connection-timeout: 20000
+      max-lifetime: 1800000
+  jpa:
+    open-in-view: false
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        default_batch_fetch_size: 50
+        order_inserts: true
+        order_updates: true
+        jdbc:
+          batch_size: 50
+  sql:
+    init:
+      mode: never
+
+jwt:
+  secret: ${JWT_SECRET:9a6e8b2c4d7f1a3e5g8h0j2k4l6m8n0p2q4r6s8t0u2v4w6x8y0z2a4b6c8d0e2f}
+

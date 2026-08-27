@@ -1,0 +1,28 @@
+# Node dependencies
+node_modules/
+frontend/node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+frontend/dist/
+target/
+backend/target/
+build/
+
+# Local data & logs
+data/
+backend/data/
+*.log
+scratch/
+.tools/
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# OS metadata
+Thumbs.db

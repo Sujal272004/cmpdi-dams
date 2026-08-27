@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: dams-backend
+  profiles:
+    active: dev
+  jpa:
+    open-in-view: false
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+server:
+  port: ${PORT:8080}
+  servlet:
+    context-path: /
+
+jwt:
+  secret: 9a6e8b2c4d7f1a3e5g8h0j2k4l6m8n0p2q4r6s8t0u2v4w6x8y0z2a4b6c8d0e2f
+  expiration-ms: 86400000 # 24 hours
+  refresh-expiration-ms: 604800000 # 7 days
