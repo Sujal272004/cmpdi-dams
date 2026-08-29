@@ -61,26 +61,10 @@ export const apiService = {
       if (err.response?.data?.message) {
         throw new Error(err.response.data.message);
       }
-      
-      // Offline / Live Vercel demo mode login fallback
-      const identifier = (credentials?.username || credentials?.email || '').toLowerCase().trim();
-      const matchedUser = mockUsers.find(
-        u => u.email.toLowerCase() === identifier || u.employeeId.toLowerCase() === identifier
-      ) || mockUsers[0];
-
-      return {
-        token: 'demo-jwt-token-' + Date.now(),
-        id: matchedUser.id,
-        employeeId: matchedUser.employeeId,
-        name: matchedUser.name,
-        email: matchedUser.email,
-        role: matchedUser.role,
-        designation: matchedUser.designation,
-        campId: matchedUser.campId || null,
-        campName: matchedUser.campName || null
-      };
+      throw new Error(err.message || 'Invalid username or password. Please try again.');
     }
   },
+
 
   // Daily Reports
   getReports: async (filters = {}) => {

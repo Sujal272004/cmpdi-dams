@@ -86,37 +86,9 @@ export const Login = () => {
             {loading ? 'Authenticating...' : 'Sign In to Enterprise Portal'}
           </button>
 
-          {/* Quick Demo Login Accounts */}
-          <div className="pt-3 border-t border-slate-200 dark:border-slate-700">
-            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-2 text-center">
-              Quick Enterprise Demo Accounts (Password: <code className="text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700 px-1 py-0.5 rounded">password123</code>)
-            </p>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => { setUsername('admin@cmpdi.co.in'); setPassword('password123'); }}
-                className="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded text-[10px] font-bold transition text-center"
-              >
-                👑 Admin
-              </button>
-              <button
-                type="button"
-                onClick={() => { setUsername('exec.anandwan@cmpdi.co.in'); setPassword('password123'); }}
-                className="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded text-[10px] font-bold transition text-center"
-              >
-                ⛏ Camp Exec
-              </button>
-              <button
-                type="button"
-                onClick={() => { setUsername('dept.head@cmpdi.co.in'); setPassword('password123'); }}
-                className="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded text-[10px] font-bold transition text-center"
-              >
-                📊 Dept Head
-              </button>
-            </div>
-          </div>
         </form>
       </div>
     </div>
   );
 };
+
