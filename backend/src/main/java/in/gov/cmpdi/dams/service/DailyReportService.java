@@ -93,6 +93,7 @@ public class DailyReportService {
                 .remarks(dto.getRemarks())
                 .blockName(dto.getBlockName())
                 .boreholeId(dto.getBoreholeId())
+                .bitNo(dto.getBitNo())
                 .boreholeDepth(dto.getBoreholeDepth())
                 .boreholeStartDate(dto.getBoreholeStartDate())
                 .workingHours(dto.getWorkingHours())
@@ -143,6 +144,7 @@ public class DailyReportService {
         report.setRemarks(dto.getRemarks());
         report.setBlockName(dto.getBlockName());
         report.setBoreholeId(dto.getBoreholeId());
+        report.setBitNo(dto.getBitNo());
         report.setBoreholeDepth(dto.getBoreholeDepth());
         report.setBoreholeStartDate(dto.getBoreholeStartDate());
         report.setWorkingHours(dto.getWorkingHours());
@@ -251,6 +253,7 @@ public class DailyReportService {
                 .remarks(r.getRemarks())
                 .blockName(r.getBlockName())
                 .boreholeId(r.getBoreholeId())
+                .bitNo(r.getBitNo())
                 .boreholeDepth(r.getBoreholeDepth())
                 .boreholeStartDate(r.getBoreholeStartDate())
                 .workingHours(r.getWorkingHours())

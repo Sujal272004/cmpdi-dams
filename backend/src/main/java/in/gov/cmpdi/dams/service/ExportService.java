@@ -41,7 +41,7 @@ public class ExportService {
             headerStyle.setAlignment(HorizontalAlignment.CENTER);
 
             String[] columns = {
-                "Report ID", "Date", "Camp", "Machine No.", "Drill Hole", "Shift",
+                "Report ID", "Date", "Camp", "Machine No.", "Drill Hole", "Bit No.", "Shift",
                 "Opening Depth (m)", "Closing Depth (m)", "Daily Progress (m)",
                 "Formation", "Core Recovery (%)", "Water Level (m)", "Status", "Created By", "Approved By"
             };
@@ -61,17 +61,19 @@ public class ExportService {
                 row.createCell(2).setCellValue(r.getCampName() != null ? r.getCampName() : "");
                 row.createCell(3).setCellValue(r.getMachineNumber() != null ? r.getMachineNumber() : "");
                 row.createCell(4).setCellValue(r.getDrillHole() != null ? r.getDrillHole() : "");
-                row.createCell(5).setCellValue(r.getShift() != null ? r.getShift() : "");
-                row.createCell(6).setCellValue(r.getOpeningDepth() != null ? r.getOpeningDepth().doubleValue() : 0.0);
-                row.createCell(7).setCellValue(r.getClosingDepth() != null ? r.getClosingDepth().doubleValue() : 0.0);
-                row.createCell(8).setCellValue(r.getDailyProgress() != null ? r.getDailyProgress().doubleValue() : 0.0);
-                row.createCell(9).setCellValue(r.getFormation() != null ? r.getFormation() : "");
-                row.createCell(10).setCellValue(r.getCoreRecovery() != null ? r.getCoreRecovery().doubleValue() : 0.0);
-                row.createCell(11).setCellValue(r.getWaterLevel() != null ? r.getWaterLevel().doubleValue() : 0.0);
-                row.createCell(12).setCellValue(r.getReportStatus() != null ? r.getReportStatus() : "");
-                row.createCell(13).setCellValue(r.getCreatedBy() != null ? r.getCreatedBy() : "");
-                row.createCell(14).setCellValue(r.getApprovedBy() != null ? r.getApprovedBy() : "N/A");
+                row.createCell(5).setCellValue(r.getBitNo() != null ? r.getBitNo() : "");
+                row.createCell(6).setCellValue(r.getShift() != null ? r.getShift() : "");
+                row.createCell(7).setCellValue(r.getOpeningDepth() != null ? r.getOpeningDepth().doubleValue() : 0.0);
+                row.createCell(8).setCellValue(r.getClosingDepth() != null ? r.getClosingDepth().doubleValue() : 0.0);
+                row.createCell(9).setCellValue(r.getDailyProgress() != null ? r.getDailyProgress().doubleValue() : 0.0);
+                row.createCell(10).setCellValue(r.getFormation() != null ? r.getFormation() : "");
+                row.createCell(11).setCellValue(r.getCoreRecovery() != null ? r.getCoreRecovery().doubleValue() : 0.0);
+                row.createCell(12).setCellValue(r.getWaterLevel() != null ? r.getWaterLevel().doubleValue() : 0.0);
+                row.createCell(13).setCellValue(r.getReportStatus() != null ? r.getReportStatus() : "");
+                row.createCell(14).setCellValue(r.getCreatedBy() != null ? r.getCreatedBy() : "");
+                row.createCell(15).setCellValue(r.getApprovedBy() != null ? r.getApprovedBy() : "N/A");
             }
+
 
             for (int i = 0; i < columns.length; i++) {
                 sheet.autoSizeColumn(i);

@@ -276,10 +276,11 @@ export const ReportDetails = () => {
 
           {/* Section 3: Borehole Details */}
           <div>
-            <h3 className={secHeadCls}>3. Borehole Details</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+            <h3 className={secHeadCls}>3. Borehole &amp; Bit Details</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 text-xs">
               <div><span className="text-slate-500">Block Name:</span><p className="font-bold text-slate-900 dark:text-white mt-0.5">{report.blockName || '—'}</p></div>
               <div><span className="text-slate-500">Borehole ID:</span><p className="font-bold text-slate-900 dark:text-white mt-0.5">{report.boreholeId || '—'}</p></div>
+              <div><span className="text-slate-500">Bit No. (Manufacturer S/N):</span><p className="font-bold text-slate-900 dark:text-white mt-0.5">{report.bitNo || '—'}</p></div>
               <div><span className="text-slate-500">Borehole Depth:</span><p className="font-bold text-slate-900 dark:text-white mt-0.5">{report.boreholeDepth ? `${report.boreholeDepth} m` : '—'}</p></div>
               <div><span className="text-slate-500">Borehole Start Date:</span><p className="font-bold text-slate-900 dark:text-white mt-0.5">{report.boreholeStartDate || '—'}</p></div>
             </div>
@@ -464,8 +465,8 @@ export const ReportDetails = () => {
 
           {/* Section 3: Borehole Details */}
           <div>
-            <h4 className={secHeadCls}>3. Borehole Details</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <h4 className={secHeadCls}>3. Borehole &amp; Bit Details</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               <div>
                 <label className={labelCls}>Block Name</label>
                 <input
@@ -482,6 +483,16 @@ export const ReportDetails = () => {
                   type="text"
                   name="boreholeId"
                   value={editForm.boreholeId || ''}
+                  onChange={handleEditChange}
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>Bit No. (Manufacturer S/N)</label>
+                <input
+                  type="text"
+                  name="bitNo"
+                  value={editForm.bitNo || ''}
                   onChange={handleEditChange}
                   className={inputCls}
                 />

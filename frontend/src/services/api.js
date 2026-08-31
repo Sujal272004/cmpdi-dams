@@ -112,6 +112,7 @@ export const apiService = {
       drillingEndTime: reportData.drillingEndTime || null,
       blockName: reportData.blockName || null,
       boreholeId: reportData.boreholeId || null,
+      bitNo: reportData.bitNo || null,
       remarks: reportData.remarks || null,
     };
 
@@ -156,6 +157,7 @@ export const apiService = {
       drillingEndTime: reportData.drillingEndTime || null,
       blockName: reportData.blockName || null,
       boreholeId: reportData.boreholeId || null,
+      bitNo: reportData.bitNo || null,
       remarks: reportData.remarks || null,
     };
 

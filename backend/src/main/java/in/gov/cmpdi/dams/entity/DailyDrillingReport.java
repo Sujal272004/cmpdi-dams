@@ -85,6 +85,10 @@ public class DailyDrillingReport {
     @Column(name = "borehole_id", length = 50)
     private String boreholeId;
 
+    @Column(name = "bit_no", length = 100)
+    private String bitNo;
+
+
     @Column(name = "borehole_depth", precision = 10, scale = 2)
     private BigDecimal boreholeDepth;
 

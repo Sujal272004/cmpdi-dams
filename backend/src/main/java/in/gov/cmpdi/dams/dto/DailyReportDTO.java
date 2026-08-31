@@ -52,6 +52,8 @@ public class DailyReportDTO {
     private String remarks;
     private String blockName;
     private String boreholeId;
+    private String bitNo;
+
     private BigDecimal boreholeDepth;
     private LocalDate boreholeStartDate;
     private BigDecimal workingHours;

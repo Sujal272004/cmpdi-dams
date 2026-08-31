@@ -22,8 +22,8 @@ export const DailyReportEntry = () => {
     drillingEndTime: '14:00',
     // New fields
     blockName: '',
-    boreholeDepth: '',
     boreholeId: '',
+    bitNo: '',
     boreholeStartDate: '',
     workingHours: '',
     dieselPump: '',
@@ -76,6 +76,7 @@ export const DailyReportEntry = () => {
         remarks: formData.remarks || null,
         blockName: formData.blockName || null,
         boreholeId: formData.boreholeId || null,
+        bitNo: formData.bitNo || null,
         reportStatus: status
       };
 
@@ -248,10 +249,10 @@ export const DailyReportEntry = () => {
           </div>
         </div>
 
-        {/* Section 3: Borehole Details */}
+        {/* Section 3: Borehole & Equipment Details */}
         <div>
-          <h3 className={sectionHeadClass}>3. Borehole Details</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <h3 className={sectionHeadClass}>3. Borehole &amp; Bit Details</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <div>
               <label className={labelClass}>Block Name</label>
               <input
@@ -272,6 +273,18 @@ export const DailyReportEntry = () => {
                 value={formData.boreholeId}
                 onChange={handleChange}
                 placeholder="e.g. BH-AND-01"
+                className={inputClass}
+              />
+            </div>
+
+            <div>
+              <label className={labelClass}>Bit No. (Manufacturer S/N)</label>
+              <input
+                type="text"
+                name="bitNo"
+                value={formData.bitNo}
+                onChange={handleChange}
+                placeholder="e.g. BIT-SN-98472"
                 className={inputClass}
               />
             </div>
@@ -301,6 +314,7 @@ export const DailyReportEntry = () => {
             </div>
           </div>
         </div>
+
 
         {/* Section 4: Operational Data */}
         <div>
