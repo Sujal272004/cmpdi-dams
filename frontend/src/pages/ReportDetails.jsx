@@ -530,7 +530,6 @@ export const ReportDetails = () => {
               />
             </div>
           </div>
-          </div>
 
           {/* Action Buttons */}
           <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-700">
