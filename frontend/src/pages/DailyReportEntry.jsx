@@ -316,58 +316,13 @@ export const DailyReportEntry = () => {
         </div>
 
 
-        {/* Section 4: Operational Data */}
+        {/* Section 4: Field Remarks */}
         <div>
-          <h3 className={sectionHeadClass}>4. Operational Data &amp; Remarks</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className={labelClass}>Working Hours</label>
-              <input
-                type="number"
-                step="0.5"
-                min="0"
-                max="24"
-                name="workingHours"
-                value={formData.workingHours}
-                onChange={handleChange}
-                placeholder="e.g. 8.0"
-                className={inputClass}
-              />
-            </div>
-
-            <div>
-              <label className={labelClass}>Diesel in Pump (Ltrs)</label>
-              <input
-                type="number"
-                step="0.1"
-                min="0"
-                name="dieselPump"
-                value={formData.dieselPump}
-                onChange={handleChange}
-                placeholder="e.g. 25.0"
-                className={inputClass}
-              />
-            </div>
-
-            <div>
-              <label className={labelClass}>Diesel in Rig (Ltrs)</label>
-              <input
-                type="number"
-                step="0.1"
-                min="0"
-                name="dieselRig"
-                value={formData.dieselRig}
-                onChange={handleChange}
-                placeholder="e.g. 50.0"
-                className={inputClass}
-              />
-            </div>
-          </div>
-
-          <div className="mt-4">
-            <label className={labelClass}>Field Remarks</label>
+          <h3 className={sectionHeadClass}>4. Field Remarks</h3>
+          <div>
+            <label className={labelClass}>Operational Remarks &amp; Observations</label>
             <textarea
-              rows="3"
+              rows="4"
               name="remarks"
               value={formData.remarks}
               onChange={handleChange}
@@ -376,6 +331,7 @@ export const DailyReportEntry = () => {
             />
           </div>
         </div>
+
 
         {/* Actions */}
         <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">

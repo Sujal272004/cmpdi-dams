@@ -286,17 +286,11 @@ export const ReportDetails = () => {
             </div>
           </div>
 
-          {/* Section 4: Operational Data */}
+          {/* Section 4: Field Remarks */}
           <div>
-            <h3 className={secHeadCls}>4. Operational Data</h3>
-            <div className="grid grid-cols-3 gap-4 text-xs">
-              <div><span className="text-slate-500">Working Hours:</span><p className="font-bold text-slate-900 dark:text-white mt-0.5">{report.workingHours ? `${report.workingHours} hrs` : '—'}</p></div>
-              <div><span className="text-slate-500">Diesel in Pump:</span><p className="font-bold text-slate-900 dark:text-white mt-0.5">{report.dieselPump ? `${report.dieselPump} Ltrs` : '—'}</p></div>
-              <div><span className="text-slate-500">Diesel in Rig:</span><p className="font-bold text-slate-900 dark:text-white mt-0.5">{report.dieselRig ? `${report.dieselRig} Ltrs` : '—'}</p></div>
-            </div>
-            <div className="mt-4 text-xs">
-              <span className="text-slate-500 font-semibold">Field Remarks:</span>
-              <p className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 font-medium mt-1">
+            <h3 className={secHeadCls}>4. Field Remarks</h3>
+            <div className="text-xs">
+              <p className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 font-medium text-slate-800 dark:text-slate-200">
                 {report.remarks || 'No specific remarks entered.'}
               </p>
             </div>
@@ -521,58 +515,21 @@ export const ReportDetails = () => {
             </div>
           </div>
 
-          {/* Section 4: Operational Data */}
+          {/* Section 4: Field Remarks */}
           <div>
-            <h4 className={secHeadCls}>4. Operational Data &amp; Remarks</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className={labelCls}>Working Hours</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  min="0"
-                  max="24"
-                  name="workingHours"
-                  value={editForm.workingHours || ''}
-                  onChange={handleEditChange}
-                  className={inputCls}
-                />
-              </div>
-              <div>
-                <label className={labelCls}>Diesel in Pump (Ltrs)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  name="dieselPump"
-                  value={editForm.dieselPump || ''}
-                  onChange={handleEditChange}
-                  className={inputCls}
-                />
-              </div>
-              <div>
-                <label className={labelCls}>Diesel in Rig (Ltrs)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  name="dieselRig"
-                  value={editForm.dieselRig || ''}
-                  onChange={handleEditChange}
-                  className={inputCls}
-                />
-              </div>
-            </div>
-            <div className="mt-4">
-              <label className={labelCls}>Field Remarks</label>
+            <h4 className={secHeadCls}>4. Field Remarks</h4>
+            <div>
+              <label className={labelCls}>Operational Remarks &amp; Observations</label>
               <textarea
-                rows="3"
+                rows="4"
                 name="remarks"
                 value={editForm.remarks || ''}
                 onChange={handleEditChange}
+                placeholder="Enter any specific field operational observations..."
                 className={inputCls}
               />
             </div>
+          </div>
           </div>
 
           {/* Action Buttons */}
