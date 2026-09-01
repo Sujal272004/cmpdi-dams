@@ -33,6 +33,7 @@ public class DashboardService {
         long pendingReports = reportRepository.countByStatus("SUBMITTED");
         long approvedReports = reportRepository.countByStatus("APPROVED");
         long returnedReports = reportRepository.countByStatus("RETURNED");
+        long draftReports = reportRepository.countByStatus("DRAFT");
 
         BigDecimal totalMeterDrilled = reportRepository.sumTotalProgressMeters();
         BigDecimal monthlyProgress = reportRepository.sumProgressMetersBetweenDates(firstDayOfMonth, today);
@@ -54,6 +55,8 @@ public class DashboardService {
                 .pendingReports(pendingReports)
                 .approvedReports(approvedReports)
                 .returnedReports(returnedReports)
+                .draftReports(draftReports)
+
                 .totalMeterDrilled(totalMeterDrilled)
                 .monthlyProgress(monthlyProgress)
                 .yearlyProgress(yearlyProgress)

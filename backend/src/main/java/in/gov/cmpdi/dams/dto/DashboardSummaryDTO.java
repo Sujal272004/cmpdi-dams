@@ -16,6 +16,8 @@ public class DashboardSummaryDTO {
     private long pendingReports;
     private long approvedReports;
     private long returnedReports;
+    private long draftReports;
+
     private BigDecimal totalMeterDrilled;
     private BigDecimal monthlyProgress;
     private BigDecimal yearlyProgress;

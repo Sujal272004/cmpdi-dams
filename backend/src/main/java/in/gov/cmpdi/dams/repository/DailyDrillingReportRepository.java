@@ -29,11 +29,12 @@ public interface DailyDrillingReportRepository extends JpaRepository<DailyDrilli
     @Query("SELECT COUNT(r) FROM DailyDrillingReport r WHERE r.isDeleted = false AND r.reportStatus = :status")
     long countByStatus(@Param("status") String status);
 
-    @Query("SELECT COALESCE(SUM(r.dailyProgress), 0) FROM DailyDrillingReport r WHERE r.isDeleted = false AND r.reportStatus = 'APPROVED'")
+    @Query("SELECT COALESCE(SUM(r.dailyProgress), 0) FROM DailyDrillingReport r WHERE r.isDeleted = false")
     BigDecimal sumTotalProgressMeters();
 
-    @Query("SELECT COALESCE(SUM(r.dailyProgress), 0) FROM DailyDrillingReport r WHERE r.isDeleted = false AND r.reportStatus = 'APPROVED' AND r.reportDate >= :startDate AND r.reportDate <= :endDate")
+    @Query("SELECT COALESCE(SUM(r.dailyProgress), 0) FROM DailyDrillingReport r WHERE r.isDeleted = false AND r.reportDate >= :startDate AND r.reportDate <= :endDate")
     BigDecimal sumProgressMetersBetweenDates(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+
 
     @Query("SELECT r.camp.campName as campName, COALESCE(SUM(r.dailyProgress), 0) as totalMeters FROM DailyDrillingReport r WHERE r.isDeleted = false GROUP BY r.camp.campName")
     List<Object[]> findCampProgressComparison();
