@@ -7,7 +7,7 @@ import {
   AlertTriangle, Calendar, CalendarDays, CalendarRange, Award, Sparkles, Layers
 } from 'lucide-react';
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTHS = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
 
 // Helper to format values as clean real whole numbers (no decimals)
 const formatInteger = (val) => {
@@ -27,10 +27,11 @@ export const TargetManagement = () => {
     monthlyTarget: '',
     yearlyTarget: '',
     months: {
-      Jan: 450, Feb: 450, Mar: 500, Apr: 450, May: 400, Jun: 300,
-      Jul: 200, Aug: 250, Sep: 350, Oct: 450, Nov: 500, Dec: 500
+      Apr: 450, May: 400, Jun: 300, Jul: 200, Aug: 250, Sep: 350,
+      Oct: 450, Nov: 500, Dec: 500, Jan: 450, Feb: 450, Mar: 500
     }
   });
+
   const [successMessage, setSuccessMessage] = useState(null);
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -305,10 +306,10 @@ export const TargetManagement = () => {
             {/* Auto Calculation Banner */}
             <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-300 font-medium space-y-1">
               <div className="flex items-center gap-1.5 font-bold text-amber-800 dark:text-amber-200">
-                <Sparkles className="w-4 h-4 text-amber-500" /> Real-Number 12-Month Target Calculator
+                <Sparkles className="w-4 h-4 text-amber-500" /> Financial Year Target Calculator (Apr – Mar)
               </div>
               <p className="text-[11px] text-amber-700 dark:text-amber-400">
-                Enter custom targets for each of the <strong>12 months (Jan – Dec)</strong>. The system automatically calculates whole integer totals for Year (Sum of 12 Months), Week (Year / 52), and Day (Month / 30).
+                Enter custom targets for each month of the <strong>Financial Year (Apr to Mar)</strong>. The system automatically calculates whole integer totals for Year Target (Sum of 12 FY Months), Week Target (Year / 52), and Day Target (Avg Month / 30).
               </p>
             </div>
 
@@ -330,15 +331,16 @@ export const TargetManagement = () => {
                 />
               </div>
               <p className="text-[10px] text-blue-600 dark:text-blue-400">
-                Entering a number here fills all 12 months with this value. You can adjust individual months below.
+                Entering a number here fills all 12 FY months with this value. You can adjust individual months below.
               </p>
             </div>
 
             {/* 12 Months Custom Breakdown Grid */}
             <div className="space-y-2 pt-1 border-t border-slate-200 dark:border-slate-700">
               <label className="block font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                <Layers className="w-4 h-4 text-amber-500" /> 12-Month Targets Grid (Custom Per-Month)
+                <Layers className="w-4 h-4 text-amber-500" /> Financial Year Monthly Grid (Apr – Mar)
               </label>
+
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
                 {MONTHS.map((m) => (
                   <div key={m} className="p-2 bg-slate-50 dark:bg-slate-700/50 rounded-lg border border-slate-200 dark:border-slate-600">
