@@ -88,6 +88,112 @@ public class ExportService {
         return generateExcelReport(campId, status, null, null);
     }
 
+    public byte[] generateSundaywiseExcelReport(Long campId, String status, String monthStr) throws IOException {
+        java.time.LocalDate fromDate;
+        java.time.LocalDate toDate;
+        if (monthStr != null && !monthStr.isBlank()) {
+            java.time.YearMonth ym = java.time.YearMonth.parse(monthStr);
+            fromDate = ym.atDay(1);
+            toDate = ym.atEndOfMonth();
+        } else {
+            java.time.YearMonth ym = java.time.YearMonth.now();
+            fromDate = ym.atDay(1);
+            toDate = ym.atEndOfMonth();
+        }
+
+        List<DailyReportDTO> allReports = dailyReportService.getAllReports(campId, status, fromDate, toDate);
+        List<DailyReportDTO> sundayReports = allReports.stream()
+                .filter(r -> r.getReportDate() != null && r.getReportDate().getDayOfWeek() == java.time.DayOfWeek.SUNDAY)
+                .toList();
+
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("Sundaywise Drilling Report");
+
+            // Title Row
+            org.apache.poi.ss.usermodel.Font titleFont = workbook.createFont();
+            titleFont.setBold(true);
+            titleFont.setFontHeightInPoints((short) 14);
+            CellStyle titleStyle = workbook.createCellStyle();
+            titleStyle.setFont(titleFont);
+
+            Row titleRow = sheet.createRow(0);
+            Cell titleCell = titleRow.createCell(0);
+            titleCell.setCellValue("CMPDI - SUNDAYWISE DRILLING PROGRESS REPORT (" + (monthStr != null ? monthStr : "ALL") + ")");
+            titleCell.setCellStyle(titleStyle);
+
+            // Header Style
+            org.apache.poi.ss.usermodel.Font headerFont = workbook.createFont();
+            headerFont.setBold(true);
+            headerFont.setColor(IndexedColors.WHITE.getIndex());
+
+            CellStyle headerStyle = workbook.createCellStyle();
+            headerStyle.setFont(headerFont);
+            headerStyle.setFillForegroundColor(IndexedColors.DARK_BLUE.getIndex());
+            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            headerStyle.setAlignment(HorizontalAlignment.CENTER);
+
+            String[] columns = {
+                "Report ID", "Sunday Date", "Camp", "Block Name", "Machine No.", "Drill Hole", "Bit No.", "Shift",
+                "Opening Depth (m)", "Closing Depth (m)", "Sunday Progress (m)",
+                "Formation", "Core Recovery (%)", "Status", "Created By"
+            };
+
+            Row headerRow = sheet.createRow(2);
+            for (int i = 0; i < columns.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(columns[i]);
+                cell.setCellStyle(headerStyle);
+            }
+
+            int rowIdx = 3;
+            double totalSundayMeters = 0.0;
+            for (DailyReportDTO r : sundayReports) {
+                Row row = sheet.createRow(rowIdx++);
+                double prog = r.getDailyProgress() != null ? r.getDailyProgress().doubleValue() : 0.0;
+                totalSundayMeters += prog;
+
+                row.createCell(0).setCellValue(r.getReportId() != null ? r.getReportId() : 0);
+                row.createCell(1).setCellValue(r.getReportDate() != null ? r.getReportDate().toString() + " (Sun)" : "");
+                row.createCell(2).setCellValue(r.getCampName() != null ? r.getCampName() : "");
+                row.createCell(3).setCellValue(r.getBlockName() != null ? r.getBlockName() : "");
+                row.createCell(4).setCellValue(r.getMachineNumber() != null ? r.getMachineNumber() : "");
+                row.createCell(5).setCellValue(r.getDrillHole() != null ? r.getDrillHole() : "");
+                row.createCell(6).setCellValue(r.getBitNo() != null ? r.getBitNo() : "");
+                row.createCell(7).setCellValue(r.getShift() != null ? r.getShift() : "");
+                row.createCell(8).setCellValue(r.getOpeningDepth() != null ? r.getOpeningDepth().doubleValue() : 0.0);
+                row.createCell(9).setCellValue(r.getClosingDepth() != null ? r.getClosingDepth().doubleValue() : 0.0);
+                row.createCell(10).setCellValue(prog);
+                row.createCell(11).setCellValue(r.getFormation() != null ? r.getFormation() : "");
+                row.createCell(12).setCellValue(r.getCoreRecovery() != null ? r.getCoreRecovery().doubleValue() : 0.0);
+                row.createCell(13).setCellValue(r.getReportStatus() != null ? r.getReportStatus() : "");
+                row.createCell(14).setCellValue(r.getCreatedBy() != null ? r.getCreatedBy() : "");
+            }
+
+            // Summary Row
+            org.apache.poi.ss.usermodel.Font totalFont = workbook.createFont();
+            totalFont.setBold(true);
+            CellStyle totalStyle = workbook.createCellStyle();
+            totalStyle.setFont(totalFont);
+
+            Row totalRow = sheet.createRow(rowIdx + 1);
+            Cell labelCell = totalRow.createCell(0);
+            labelCell.setCellValue("TOTAL SUNDAY DRILLING PROGRESS");
+            labelCell.setCellStyle(totalStyle);
+
+            Cell valCell = totalRow.createCell(10);
+            valCell.setCellValue(totalSundayMeters);
+            valCell.setCellStyle(totalStyle);
+
+            for (int i = 0; i < columns.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            workbook.write(out);
+            return out.toByteArray();
+        }
+    }
+
+
     public byte[] generatePdfReport(Long campId, String status, java.time.LocalDate fromDate, java.time.LocalDate toDate) throws DocumentException {
         List<DailyReportDTO> reports = dailyReportService.getAllReports(campId, status, fromDate, toDate);
 

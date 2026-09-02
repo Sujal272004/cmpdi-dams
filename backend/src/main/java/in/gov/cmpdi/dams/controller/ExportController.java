@@ -30,6 +30,20 @@ public class ExportController {
                 .body(bytes);
     }
 
+    @GetMapping("/excel/sundaywise")
+    public ResponseEntity<byte[]> exportSundaywiseExcel(
+            @RequestParam(required = false) Long campId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String month) throws Exception {
+        byte[] bytes = exportService.generateSundaywiseExcelReport(campId, status, month);
+        String filename = "CMPDI_Sundaywise_Drilling_Report_" + (month != null ? month : "ALL") + ".xlsx";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(bytes);
+    }
+
+
     @GetMapping("/pdf")
     public ResponseEntity<byte[]> exportPdf(
             @RequestParam(required = false) Long campId,
