@@ -63,7 +63,7 @@ const TABS = [
 
 // ─── DAILY TAB ────────────────────────────────────────────────────────────────
 const DailyTab = ({ reports, loading, isCampExec }) => {
-  const [filters, setFilters] = useState({ fromDate: '', toDate: '', campId: '', blockName: '', status: '' });
+  const [filters, setFilters] = useState({ fromDate: '', toDate: '', campId: '', blockName: '', bitNo: '', status: '' });
 
   const filtered = useMemo(() => {
     return reports.filter(r => {
@@ -71,6 +71,7 @@ const DailyTab = ({ reports, loading, isCampExec }) => {
       if (filters.toDate   && r.reportDate > filters.toDate)   return false;
       if (filters.campId   && r.campId !== parseInt(filters.campId)) return false;
       if (filters.blockName && !r.blockName?.toLowerCase().includes(filters.blockName.toLowerCase())) return false;
+      if (filters.bitNo     && !r.bitNo?.toLowerCase().includes(filters.bitNo.toLowerCase())) return false;
       if (filters.status   && r.reportStatus !== filters.status) return false;
       return true;
     });
@@ -88,12 +89,12 @@ const DailyTab = ({ reports, loading, isCampExec }) => {
           <span className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 uppercase tracking-wider">
             <Filter className="w-3.5 h-3.5 text-blue-500" /> Multi-Field Filters
           </span>
-          <button onClick={() => setFilters({ fromDate: '', toDate: '', campId: '', blockName: '', status: '' })}
+          <button onClick={() => setFilters({ fromDate: '', toDate: '', campId: '', blockName: '', bitNo: '', status: '' })}
             className="text-xs text-rose-600 font-semibold hover:underline flex items-center gap-1">
             <RotateCcw className="w-3 h-3" /> Reset
           </button>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
           <div>
             <label className={labelCls}>From Date</label>
             <input type="date" value={filters.fromDate} onChange={e => setFilters(p => ({ ...p, fromDate: e.target.value }))} className={inputCls} />
@@ -120,6 +121,16 @@ const DailyTab = ({ reports, loading, isCampExec }) => {
               placeholder="Search block..."
               value={filters.blockName}
               onChange={e => setFilters(p => ({ ...p, blockName: e.target.value }))}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Bit No. (S/N)</label>
+            <input
+              type="text"
+              placeholder="Search Bit No..."
+              value={filters.bitNo}
+              onChange={e => setFilters(p => ({ ...p, bitNo: e.target.value }))}
               className={inputCls}
             />
           </div>
@@ -156,6 +167,7 @@ const DailyTab = ({ reports, loading, isCampExec }) => {
                 <th className={thCls}>Block Name</th>
                 <th className={thCls}>Machine</th>
                 <th className={thCls}>Drill Hole</th>
+                <th className={thCls}>Bit No.</th>
                 <th className={thCls}>Shift</th>
                 <th className={thCls}>Progress</th>
                 <th className={thCls}>Status</th>
@@ -164,9 +176,9 @@ const DailyTab = ({ reports, loading, isCampExec }) => {
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {loading ? (
-                <tr><td colSpan="10" className="p-8 text-center text-slate-400">Loading records...</td></tr>
+                <tr><td colSpan="11" className="p-8 text-center text-slate-400">Loading records...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan="10" className="p-8 text-center text-slate-400">No records match the filters.</td></tr>
+                <tr><td colSpan="11" className="p-8 text-center text-slate-400">No records match the filters.</td></tr>
               ) : filtered.map(r => (
                 <tr key={r.reportId} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition">
                   <td className={`${tdCls} font-bold text-cmpdi-navy dark:text-sky-400`}>#{r.reportId}</td>
@@ -175,6 +187,7 @@ const DailyTab = ({ reports, loading, isCampExec }) => {
                   <td className={`${tdCls} font-medium text-slate-600 dark:text-slate-300`}>{r.blockName || '—'}</td>
                   <td className={tdCls}>{r.machineNumber}</td>
                   <td className={`${tdCls} font-bold`}>{r.drillHole}</td>
+                  <td className={`${tdCls} font-medium text-amber-700 dark:text-amber-300`}>{r.bitNo || '—'}</td>
                   <td className={tdCls}>{r.shift?.replace('SHIFT_', 'Shift ')}</td>
                   <td className={`${tdCls} font-bold text-blue-700 dark:text-sky-300`}>{r.dailyProgress} m</td>
                   <td className={tdCls}><StatusChip status={r.reportStatus} /></td>
@@ -194,16 +207,19 @@ const DailyTab = ({ reports, loading, isCampExec }) => {
   );
 };
 
+
 // ─── WEEKLY TAB ───────────────────────────────────────────────────────────────
 const WeeklyTab = ({ reports, loading, isCampExec }) => {
   const [campId, setCampId]       = useState('');
   const [blockName, setBlockName] = useState('');
+  const [bitNo, setBitNo]         = useState('');
   const [year, setYear]           = useState(new Date().getFullYear().toString());
 
   const grouped = useMemo(() => {
     let base = reports.filter(r => {
       if (campId && r.campId !== parseInt(campId)) return false;
       if (blockName && !r.blockName?.toLowerCase().includes(blockName.toLowerCase())) return false;
+      if (bitNo && !r.bitNo?.toLowerCase().includes(bitNo.toLowerCase())) return false;
       if (year   && !r.reportDate.startsWith(year)) return false;
       return true;
     });
@@ -222,7 +238,7 @@ const WeeklyTab = ({ reports, loading, isCampExec }) => {
     return Object.values(map)
       .sort((a, b) => b.weekKey.localeCompare(a.weekKey))
       .map(w => ({ ...w, camps: [...w.camps].join(', '), avgMeters: (w.totalMeters / w.records.length).toFixed(2) }));
-  }, [reports, campId, blockName, year]);
+  }, [reports, campId, blockName, bitNo, year]);
 
   const grandTotal = grouped.reduce((s, w) => s + w.totalMeters, 0);
 
@@ -230,7 +246,7 @@ const WeeklyTab = ({ reports, loading, isCampExec }) => {
     <div className="space-y-4">
       {/* Filters */}
       <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
-        <div className={`grid gap-3 ${isCampExec ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2 lg:grid-cols-4'}`}>
+        <div className={`grid gap-3 ${isCampExec ? 'grid-cols-1 sm:grid-cols-4' : 'grid-cols-2 lg:grid-cols-5'}`}>
           <div>
             <label className={labelCls}>Year</label>
             <select value={year} onChange={e => setYear(e.target.value)} className={inputCls}>
@@ -259,8 +275,18 @@ const WeeklyTab = ({ reports, loading, isCampExec }) => {
               className={inputCls}
             />
           </div>
+          <div>
+            <label className={labelCls}>Bit No. (S/N)</label>
+            <input
+              type="text"
+              placeholder="Search Bit No..."
+              value={bitNo}
+              onChange={e => setBitNo(e.target.value)}
+              className={inputCls}
+            />
+          </div>
           <div className="flex items-end">
-            <button onClick={() => { setCampId(''); setBlockName(''); setYear(new Date().getFullYear().toString()); }}
+            <button onClick={() => { setCampId(''); setBlockName(''); setBitNo(''); setYear(new Date().getFullYear().toString()); }}
               className="w-full px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-600 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 flex items-center justify-center gap-1 transition">
               <RotateCcw className="w-3 h-3" /> Reset
             </button>
@@ -327,12 +353,14 @@ const WeeklyTab = ({ reports, loading, isCampExec }) => {
 const MonthlyTab = ({ reports, loading, isCampExec }) => {
   const [campId, setCampId]       = useState('');
   const [blockName, setBlockName] = useState('');
+  const [bitNo, setBitNo]         = useState('');
   const [year, setYear]           = useState(new Date().getFullYear().toString());
 
   const grouped = useMemo(() => {
     let base = reports.filter(r => {
       if (campId && r.campId !== parseInt(campId)) return false;
       if (blockName && !r.blockName?.toLowerCase().includes(blockName.toLowerCase())) return false;
+      if (bitNo && !r.bitNo?.toLowerCase().includes(bitNo.toLowerCase())) return false;
       if (year   && !r.reportDate.startsWith(year)) return false;
       return true;
     });
@@ -358,7 +386,7 @@ const MonthlyTab = ({ reports, loading, isCampExec }) => {
         camps: [...m.camps].join(', '),
         avgPerDay: (m.totalMeters / m.records.length).toFixed(2),
       }));
-  }, [reports, campId, blockName, year]);
+  }, [reports, campId, blockName, bitNo, year]);
 
   const grandTotal = grouped.reduce((s, m) => s + m.totalMeters, 0);
 
@@ -366,7 +394,7 @@ const MonthlyTab = ({ reports, loading, isCampExec }) => {
     <div className="space-y-4">
       {/* Filters */}
       <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
-        <div className={`grid gap-3 ${isCampExec ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2 lg:grid-cols-4'}`}>
+        <div className={`grid gap-3 ${isCampExec ? 'grid-cols-1 sm:grid-cols-4' : 'grid-cols-2 lg:grid-cols-5'}`}>
           <div>
             <label className={labelCls}>Year</label>
             <select value={year} onChange={e => setYear(e.target.value)} className={inputCls}>
@@ -395,8 +423,18 @@ const MonthlyTab = ({ reports, loading, isCampExec }) => {
               className={inputCls}
             />
           </div>
+          <div>
+            <label className={labelCls}>Bit No. (S/N)</label>
+            <input
+              type="text"
+              placeholder="Search Bit No..."
+              value={bitNo}
+              onChange={e => setBitNo(e.target.value)}
+              className={inputCls}
+            />
+          </div>
           <div className="flex items-end">
-            <button onClick={() => { setCampId(''); setBlockName(''); setYear(new Date().getFullYear().toString()); }}
+            <button onClick={() => { setCampId(''); setBlockName(''); setBitNo(''); setYear(new Date().getFullYear().toString()); }}
               className="w-full px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-600 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 flex items-center justify-center gap-1 transition">
               <RotateCcw className="w-3 h-3" /> Reset
             </button>
@@ -468,6 +506,7 @@ const MonthlyTab = ({ reports, loading, isCampExec }) => {
 const SundayTab = ({ reports, loading, isCampExec }) => {
   const [campId, setCampId]       = useState('');
   const [blockName, setBlockName] = useState('');
+  const [bitNo, setBitNo]         = useState('');
   const [month,  setMonth]        = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`);
 
   const sundayReports = useMemo(() => {
@@ -475,10 +514,11 @@ const SundayTab = ({ reports, loading, isCampExec }) => {
       if (!isSunday(r.reportDate)) return false;
       if (campId && r.campId !== parseInt(campId)) return false;
       if (blockName && !r.blockName?.toLowerCase().includes(blockName.toLowerCase())) return false;
+      if (bitNo && !r.bitNo?.toLowerCase().includes(bitNo.toLowerCase())) return false;
       if (month  && !r.reportDate.startsWith(month)) return false;
       return true;
     }).sort((a, b) => b.reportDate.localeCompare(a.reportDate));
-  }, [reports, campId, blockName, month]);
+  }, [reports, campId, blockName, bitNo, month]);
 
   // Group by Sunday date for summary
   const byDate = useMemo(() => {
@@ -506,7 +546,7 @@ const SundayTab = ({ reports, loading, isCampExec }) => {
 
       {/* Filters */}
       <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
-        <div className={`grid gap-3 ${isCampExec ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2 lg:grid-cols-4'}`}>
+        <div className={`grid gap-3 ${isCampExec ? 'grid-cols-1 sm:grid-cols-4' : 'grid-cols-2 lg:grid-cols-5'}`}>
           <div>
             <label className={labelCls}>Month</label>
             <input type="month" value={month} onChange={e => setMonth(e.target.value)} className={inputCls} />
@@ -532,8 +572,18 @@ const SundayTab = ({ reports, loading, isCampExec }) => {
               className={inputCls}
             />
           </div>
+          <div>
+            <label className={labelCls}>Bit No. (S/N)</label>
+            <input
+              type="text"
+              placeholder="Search Bit No..."
+              value={bitNo}
+              onChange={e => setBitNo(e.target.value)}
+              className={inputCls}
+            />
+          </div>
           <div className="flex items-end">
-            <button onClick={() => { setCampId(''); setBlockName(''); setMonth(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`); }}
+            <button onClick={() => { setCampId(''); setBlockName(''); setBitNo(''); setMonth(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`); }}
               className="w-full px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-600 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 flex items-center justify-center gap-1 transition">
               <RotateCcw className="w-3 h-3" /> Reset
             </button>
@@ -587,6 +637,7 @@ const SundayTab = ({ reports, loading, isCampExec }) => {
                 <th className={thCls}>Block Name</th>
                 <th className={thCls}>Machine</th>
                 <th className={thCls}>Drill Hole</th>
+                <th className={thCls}>Bit No.</th>
                 <th className={thCls}>Shift</th>
                 <th className={thCls}>Meters</th>
                 <th className={thCls}>Status</th>
@@ -595,10 +646,10 @@ const SundayTab = ({ reports, loading, isCampExec }) => {
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {loading ? (
-                <tr><td colSpan="10" className="p-8 text-center text-slate-400">Loading...</td></tr>
+                <tr><td colSpan="11" className="p-8 text-center text-slate-400">Loading...</td></tr>
               ) : sundayReports.length === 0 ? (
                 <tr>
-                  <td colSpan="10" className="p-10 text-center">
+                  <td colSpan="11" className="p-10 text-center">
                     <Sun className="w-8 h-8 text-amber-300 mx-auto mb-2" />
                     <p className="text-sm text-slate-500">No drilling records found on Sundays in {monthLabel}.</p>
                   </td>
@@ -611,6 +662,7 @@ const SundayTab = ({ reports, loading, isCampExec }) => {
                   <td className={`${tdCls} font-medium text-slate-600 dark:text-slate-300`}>{r.blockName || '—'}</td>
                   <td className={tdCls}>{r.machineNumber}</td>
                   <td className={`${tdCls} font-bold`}>{r.drillHole}</td>
+                  <td className={`${tdCls} font-medium text-amber-700 dark:text-amber-300`}>{r.bitNo || '—'}</td>
                   <td className={tdCls}>{r.shift?.replace('SHIFT_', 'Shift ')}</td>
                   <td className={`${tdCls} font-extrabold text-amber-700 dark:text-amber-300`}>{r.dailyProgress} m</td>
                   <td className={tdCls}><StatusChip status={r.reportStatus} /></td>
