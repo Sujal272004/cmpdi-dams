@@ -67,6 +67,31 @@ export const TargetManagement = () => {
     }
   };
 
+  const handleMonthlyTargetChange = (val) => {
+    const monthVal = parseFloat(val);
+    if (!isNaN(monthVal) && monthVal > 0) {
+      // Automatic calculation of definite numbers:
+      // Year Target = Month Target * 12
+      const yearVal = (monthVal * 12).toFixed(2);
+      // Week Target = (Month Target * 12) / 52 weeks
+      const weekVal = ((monthVal * 12) / 52).toFixed(2);
+      // Day Target = Month Target / 30 days
+      const dayVal = (monthVal / 30).toFixed(2);
+
+      setFormState({
+        monthlyTarget: val,
+        yearlyTarget: parseFloat(yearVal).toString(),
+        weeklyTarget: parseFloat(weekVal).toString(),
+        dailyTarget: parseFloat(dayVal).toString()
+      });
+    } else {
+      setFormState(p => ({
+        ...p,
+        monthlyTarget: val
+      }));
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -77,7 +102,7 @@ export const TargetManagement = () => {
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             {canEditTargets
-              ? "Configure official Day, Week, Month, and Year drilling targets for all exploration camps"
+              ? "Configure official Day, Week, Month, and Year drilling targets with automatic formula calculation"
               : `Official Day, Week, Month, and Year drilling targets assigned to ${user?.campName || 'your camp'} by HQ`}
           </p>
         </div>
@@ -238,66 +263,84 @@ export const TargetManagement = () => {
               </div>
             )}
 
-            <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Day Target (Meters / Day)
+            {/* Auto Calculation Banner */}
+            <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-300 font-medium space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-amber-800 dark:text-amber-200">
+                <Target className="w-4 h-4 text-amber-500" /> Auto-Calculation Mode
+              </div>
+              <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                Updating the <strong>Month Target</strong> automatically calculates definite values for <strong>Day Target</strong> (Month / 30), <strong>Week Target</strong> (Year / 52), and <strong>Year Target</strong> (Month × 12).
+              </p>
+            </div>
+
+            {/* Month Target - Primary */}
+            <div className="p-3 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50/30 dark:bg-amber-950/20 space-y-1">
+              <label className="block font-bold text-amber-900 dark:text-amber-200 flex items-center justify-between">
+                <span>Month Target (Meters / Month)</span>
+                <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider bg-amber-200 dark:bg-amber-900/60 px-2 py-0.5 rounded">Primary Input</span>
               </label>
               <input
                 type="number"
-                step="0.1"
+                step="0.01"
+                min="0"
+                required
+                value={formState.monthlyTarget}
+                onChange={e => handleMonthlyTargetChange(e.target.value)}
+                placeholder="e.g. 600"
+                className="w-full p-2.5 text-sm font-bold border border-amber-400 rounded-lg dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
+              />
+            </div>
+
+            {/* Daily Target */}
+            <div>
+              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                <span>Day Target (Meters / Day)</span>
+                <span className="text-[10px] text-slate-400 font-normal">(Month / 30 days)</span>
+              </label>
+              <input
+                type="number"
+                step="0.01"
                 min="0"
                 required
                 value={formState.dailyTarget}
                 onChange={e => setFormState(p => ({ ...p, dailyTarget: e.target.value }))}
-                placeholder="e.g. 25.0"
+                placeholder="e.g. 20.0"
                 className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-lg dark:bg-slate-900"
               />
             </div>
 
+            {/* Weekly Target */}
             <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Week Target (Meters / Week)
+              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                <span>Week Target (Meters / Week)</span>
+                <span className="text-[10px] text-slate-400 font-normal">(Year / 52 weeks)</span>
               </label>
               <input
                 type="number"
-                step="0.1"
+                step="0.01"
                 min="0"
                 required
                 value={formState.weeklyTarget}
                 onChange={e => setFormState(p => ({ ...p, weeklyTarget: e.target.value }))}
-                placeholder="e.g. 150.0"
+                placeholder="e.g. 138.46"
                 className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-lg dark:bg-slate-900"
               />
             </div>
 
+            {/* Yearly Target */}
             <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Month Target (Meters / Month)
+              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                <span>Year Target (Meters / Year)</span>
+                <span className="text-[10px] text-slate-400 font-normal">(Month × 12 months)</span>
               </label>
               <input
                 type="number"
-                step="0.1"
-                min="0"
-                required
-                value={formState.monthlyTarget}
-                onChange={e => setFormState(p => ({ ...p, monthlyTarget: e.target.value }))}
-                placeholder="e.g. 600.0"
-                className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-lg dark:bg-slate-900"
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Year Target (Meters / Year)
-              </label>
-              <input
-                type="number"
-                step="0.1"
+                step="0.01"
                 min="0"
                 required
                 value={formState.yearlyTarget}
                 onChange={e => setFormState(p => ({ ...p, yearlyTarget: e.target.value }))}
-                placeholder="e.g. 4800.0"
+                placeholder="e.g. 7200.0"
                 className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-lg dark:bg-slate-900"
               />
             </div>
@@ -324,3 +367,4 @@ export const TargetManagement = () => {
     </div>
   );
 };
+
