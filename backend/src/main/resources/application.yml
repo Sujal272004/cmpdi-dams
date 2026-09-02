@@ -2,12 +2,13 @@ spring:
   application:
     name: dams-backend
   profiles:
-    active: dev
+    active: ${SPRING_PROFILES_ACTIVE:prod}
   jpa:
     open-in-view: false
   jackson:
     serialization:
       write-dates-as-timestamps: false
+
 
 server:
   port: ${PORT:8080}

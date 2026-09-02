@@ -20,5 +20,7 @@ COPY --from=build /app/target/dams-backend-1.0.0-RELEASE.jar app.jar
 # Expose port (Render automatically sets $PORT)
 EXPOSE 8080
 ENV PORT=8080
+ENV SPRING_PROFILES_ACTIVE=prod
 
-ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-Dspring.profiles.active=prod", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]
+
