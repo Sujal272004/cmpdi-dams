@@ -115,21 +115,11 @@ export const TargetManagement = () => {
     });
   };
 
-  // Handle individual month input change in grid
+  // Handle individual month input change in Financial Year grid
   const handleSingleMonthChange = (monthKey, val) => {
     const intVal = Math.max(0, parseInt(val) || 0);
     const updated = { ...formState.months, [monthKey]: intVal };
     recalculateFromMonthsGrid(updated);
-  };
-
-  // Handle main monthly target input change (Fills all 12 months evenly)
-  const handleMonthlyTargetChange = (val) => {
-    const moVal = Math.max(0, parseInt(val) || 0);
-    const updatedMonths = {};
-    MONTHS.forEach(m => {
-      updatedMonths[m] = moVal;
-    });
-    recalculateFromMonthsGrid(updatedMonths);
   };
 
   return (
@@ -142,7 +132,7 @@ export const TargetManagement = () => {
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             {canEditTargets
-              ? "Set month-by-month target metrics for all 12 months with real-number auto-calculation for Day, Week, and Year targets"
+              ? "Assign separate targets for each month of the Financial Year (Apr to Mar) with real-number auto-calculation for Day, Week, and Year targets"
               : `Official Day, Week, Month, and Year drilling targets assigned to ${user?.campName || 'your camp'} by HQ`}
           </p>
         </div>
@@ -306,57 +296,40 @@ export const TargetManagement = () => {
             {/* Auto Calculation Banner */}
             <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-300 font-medium space-y-1">
               <div className="flex items-center gap-1.5 font-bold text-amber-800 dark:text-amber-200">
-                <Sparkles className="w-4 h-4 text-amber-500" /> Financial Year Target Calculator (Apr – Mar)
+                <Sparkles className="w-4 h-4 text-amber-500" /> Financial Year Monthly Target Configuration (Apr – Mar)
               </div>
               <p className="text-[11px] text-amber-700 dark:text-amber-400">
-                Enter custom targets for each month of the <strong>Financial Year (Apr to Mar)</strong>. The system automatically calculates whole integer totals for Year Target (Sum of 12 FY Months), Week Target (Year / 52), and Day Target (Avg Month / 30).
-              </p>
-            </div>
-
-            {/* Quick Fill Default Target */}
-            <div className="p-3 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50/40 dark:bg-blue-950/20 space-y-2">
-              <label className="block font-bold text-blue-900 dark:text-blue-200 flex items-center justify-between">
-                <span>Quick Fill Default Monthly Target (Meters)</span>
-                <span className="text-[10px] font-bold text-blue-700 dark:text-blue-300 uppercase bg-blue-200 dark:bg-blue-900/60 px-2 py-0.5 rounded">Quick Fill</span>
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={formState.monthlyTarget}
-                  onChange={e => handleMonthlyTargetChange(e.target.value)}
-                  placeholder="e.g. 500"
-                  className="flex-1 p-2 text-sm font-bold border border-blue-300 dark:border-blue-700 rounded-lg dark:bg-slate-900 text-slate-900 dark:text-white"
-                />
-              </div>
-              <p className="text-[10px] text-blue-600 dark:text-blue-400">
-                Entering a number here fills all 12 FY months with this value. You can adjust individual months below.
+                Assign separate targets for each month of the <strong>Financial Year (Apr to Mar)</strong>. The system automatically sums and calculates whole real-number totals for Year Target (Sum of 12 Months), Week Target (Year / 52), and Day Target (Avg Month / 30).
               </p>
             </div>
 
             {/* 12 Months Custom Breakdown Grid */}
             <div className="space-y-2 pt-1 border-t border-slate-200 dark:border-slate-700">
               <label className="block font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                <Layers className="w-4 h-4 text-amber-500" /> Financial Year Monthly Grid (Apr – Mar)
+                <Layers className="w-4 h-4 text-amber-500" /> Set Targets for Each Month (Financial Year Apr – Mar)
               </label>
 
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
                 {MONTHS.map((m) => (
-                  <div key={m} className="p-2 bg-slate-50 dark:bg-slate-700/50 rounded-lg border border-slate-200 dark:border-slate-600">
-                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">{m}</label>
+                  <div key={m} className="p-2.5 bg-slate-50 dark:bg-slate-700/50 rounded-xl border border-slate-200 dark:border-slate-600 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-extrabold text-cmpdi-navy dark:text-sky-400 uppercase">{m}</span>
+                      <span className="text-[9px] font-semibold text-slate-400">Target (m)</span>
+                    </div>
                     <input
                       type="number"
                       min="0"
                       step="1"
                       value={formState.months[m] ?? 0}
                       onChange={e => handleSingleMonthChange(m, e.target.value)}
-                      className="w-full p-1.5 text-xs font-bold border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                      placeholder="0"
+                      className="w-full p-2 text-xs font-extrabold border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
                     />
                   </div>
                 ))}
               </div>
             </div>
+
 
             {/* Summary Calculated Real Numbers */}
             <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/30 space-y-3 pt-3">
