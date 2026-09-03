@@ -1,7 +1,6 @@
 import axios from 'axios';
 
 const getApiBaseUrl = () => {
-
   if (import.meta.env.VITE_API_BASE_URL) {
     return import.meta.env.VITE_API_BASE_URL;
   }
@@ -15,12 +14,11 @@ const API_BASE_URL = getApiBaseUrl();
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 60000, // 60s timeout to handle Render Free Tier container cold starts
   headers: {
     'Content-Type': 'application/json',
   },
 });
-
 
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('dams_token');
@@ -32,7 +30,8 @@ apiClient.interceptors.request.use((config) => {
 
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const config = error.config;
     if (error.response && (error.response.status === 401 || error.response.status === 403)) {
       console.warn("Session expired or unauthorized. Clearing stored auth.");
       localStorage.removeItem('dams_token');
@@ -40,10 +39,42 @@ apiClient.interceptors.response.use(
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }
+      return Promise.reject(error);
     }
+
+    // Auto-retry once or twice on cold-start timeout / gateway errors while Render wakes up
+    if (config && (!config._retryCount || config._retryCount < 2)) {
+      config._retryCount = (config._retryCount || 0) + 1;
+      if (error.code === 'ECONNABORTED' || !error.response || error.response.status >= 500) {
+        console.warn(`Render cloud backend waking up... Auto-retrying request (${config._retryCount}/2)`);
+        await new Promise(resolve => setTimeout(resolve, 2500));
+        return apiClient(config);
+      }
+    }
+
     return Promise.reject(error);
   }
 );
+
+// Helpers for persistent client storage cache
+const getPersistentReports = () => {
+  try {
+    const cached = localStorage.getItem('dams_persistent_reports');
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) {}
+  return [];
+};
+
+const setPersistentReports = (reports) => {
+  try {
+    if (Array.isArray(reports)) {
+      localStorage.setItem('dams_persistent_reports', JSON.stringify(reports));
+    }
+  } catch (e) {}
+};
 
 // Initial data collections fallback
 let mockCamps = [
@@ -58,7 +89,7 @@ let mockUsers = [
   { id: 3, employeeId: 'EMP003', name: 'Amit Patel', designation: 'Camp Executive - Murpar', email: 'exec.murpar@cmpdi.co.in', role: 'ROLE_CAMP_EXEC', campId: 2, campName: 'Murpar Camp', status: 'ACTIVE' },
   { id: 4, employeeId: 'EMP004', name: 'Dr. Sunita Deshmukh', designation: 'General Manager (Exploration)', email: 'dept.head@cmpdi.co.in', role: 'ROLE_DEPT_EXEC', status: 'ACTIVE' }
 ];
-let mockReports = [];
+let mockReports = getPersistentReports();
 let mockAuditLogs = [];
 let mockNotifications = [];
 
@@ -76,17 +107,20 @@ export const apiService = {
     }
   },
 
-
   // Daily Reports
   getReports: async (filters = {}) => {
     try {
       const response = await apiClient.get('/reports', { params: filters });
-      if (Array.isArray(response.data?.data) && Object.keys(filters).length === 0) {
+      if (Array.isArray(response.data?.data)) {
         mockReports = response.data.data;
+        if (Object.keys(filters).length === 0) {
+          setPersistentReports(response.data.data);
+        }
+        return response.data.data;
       }
-      return response.data.data;
+      return getPersistentReports();
     } catch {
-      let filtered = [...mockReports];
+      let filtered = getPersistentReports();
       if (filters.campId) {
         filtered = filtered.filter(r => r.campId === parseInt(filters.campId));
       }
@@ -111,7 +145,8 @@ export const apiService = {
       const response = await apiClient.get(`/reports/${id}`);
       return response.data.data;
     } catch {
-      return mockReports.find(r => r.reportId === parseInt(id)) || mockReports[0];
+      const reports = getPersistentReports();
+      return reports.find(r => r.reportId === parseInt(id)) || reports[0];
     }
   },
 
@@ -129,7 +164,13 @@ export const apiService = {
 
     try {
       const response = await apiClient.post('/reports', sanitizedData);
-      return response.data.data;
+      const created = response.data.data;
+      if (created) {
+        const currentCache = getPersistentReports();
+        currentCache.unshift(created);
+        setPersistentReports(currentCache);
+      }
+      return created;
     } catch (err) {
       if (err.response?.data?.message) {
         throw new Error(err.response.data.message);
@@ -141,7 +182,7 @@ export const apiService = {
         throw new Error(err.message);
       }
 
-      // Offline fallback
+      // Offline persistent fallback
       const camp = mockCamps.find(c => c.id === parseInt(reportData.campId)) || mockCamps[0] || { campName: 'Drilling Camp' };
       const dailyProg = parseFloat((reportData.closingDepth - reportData.openingDepth).toFixed(2));
       const newReport = {
@@ -155,7 +196,10 @@ export const apiService = {
         correctionHistory: [],
         createdAt: new Date().toISOString()
       };
-      mockReports.unshift(newReport);
+      
+      const currentCache = getPersistentReports();
+      currentCache.unshift(newReport);
+      setPersistentReports(currentCache);
       return newReport;
     }
   },
@@ -174,14 +218,24 @@ export const apiService = {
 
     try {
       const response = await apiClient.put(`/reports/${id}`, sanitizedData);
-      return response.data.data;
+      const updated = response.data.data;
+      if (updated) {
+        const currentCache = getPersistentReports();
+        const idx = currentCache.findIndex(r => r.reportId === parseInt(id));
+        if (idx !== -1) {
+          currentCache[idx] = updated;
+          setPersistentReports(currentCache);
+        }
+      }
+      return updated;
     } catch (err) {
       if (err.response?.data?.message) {
         throw new Error(err.response.data.message);
       }
-      const index = mockReports.findIndex(r => r.reportId === parseInt(id));
+      const currentCache = getPersistentReports();
+      const index = currentCache.findIndex(r => r.reportId === parseInt(id));
       if (index !== -1) {
-        const old = mockReports[index];
+        const old = currentCache[index];
         const dailyProg = parseFloat((reportData.closingDepth - reportData.openingDepth).toFixed(2));
         const updated = {
           ...old,
@@ -190,7 +244,8 @@ export const apiService = {
           version: (old.version || 0) + 1,
           updatedAt: new Date().toISOString()
         };
-        mockReports[index] = updated;
+        currentCache[index] = updated;
+        setPersistentReports(currentCache);
         return updated;
       }
       throw new Error(err.message || 'Report not found');
@@ -200,24 +255,24 @@ export const apiService = {
   approveReport: async (id, approver) => {
     try {
       const response = await apiClient.post(`/reports/${id}/approve`);
-      return response.data.data;
+      const approved = response.data.data;
+      if (approved) {
+        const currentCache = getPersistentReports();
+        const idx = currentCache.findIndex(r => r.reportId === parseInt(id));
+        if (idx !== -1) {
+          currentCache[idx] = approved;
+          setPersistentReports(currentCache);
+        }
+      }
+      return approved;
     } catch {
-      const report = mockReports.find(r => r.reportId === parseInt(id));
+      const currentCache = getPersistentReports();
+      const report = currentCache.find(r => r.reportId === parseInt(id));
       if (report) {
         report.reportStatus = 'APPROVED';
         report.approvedBy = approver?.name || 'Dr. Sunita Deshmukh';
         report.approvedDate = new Date().toISOString();
-        mockAuditLogs.unshift({
-          id: mockAuditLogs.length + 1,
-          entityName: 'DailyDrillingReport',
-          entityId: id.toString(),
-          action: 'APPROVE',
-          oldValue: 'Status: SUBMITTED',
-          newValue: 'Status: APPROVED',
-          changedBy: report.approvedBy,
-          ipAddress: '127.0.0.1',
-          timestamp: new Date().toISOString()
-        });
+        setPersistentReports(currentCache);
         return report;
       }
     }
@@ -226,30 +281,31 @@ export const apiService = {
   returnReport: async (id, remarks, reviewer) => {
     try {
       const response = await apiClient.post(`/reports/${id}/return`, { remarks });
-      return response.data.data;
+      const returned = response.data.data;
+      if (returned) {
+        const currentCache = getPersistentReports();
+        const idx = currentCache.findIndex(r => r.reportId === parseInt(id));
+        if (idx !== -1) {
+          currentCache[idx] = returned;
+          setPersistentReports(currentCache);
+        }
+      }
+      return returned;
     } catch {
-      const report = mockReports.find(r => r.reportId === parseInt(id));
+      const currentCache = getPersistentReports();
+      const report = currentCache.find(r => r.reportId === parseInt(id));
       if (report) {
         report.reportStatus = 'RETURNED';
         const remarkObj = {
-          id: report.correctionHistory.length + 1,
+          id: (report.correctionHistory?.length || 0) + 1,
           reportId: parseInt(id),
           remarks,
           createdBy: reviewer?.name || 'Dr. Sunita Deshmukh',
           createdAt: new Date().toISOString()
         };
+        if (!report.correctionHistory) report.correctionHistory = [];
         report.correctionHistory.unshift(remarkObj);
-        mockAuditLogs.unshift({
-          id: mockAuditLogs.length + 1,
-          entityName: 'DailyDrillingReport',
-          entityId: id.toString(),
-          action: 'RETURN',
-          oldValue: 'Status: SUBMITTED',
-          newValue: `Status: RETURNED (Remark: ${remarks})`,
-          changedBy: remarkObj.createdBy,
-          ipAddress: '127.0.0.1',
-          timestamp: new Date().toISOString()
-        });
+        setPersistentReports(currentCache);
         return report;
       }
     }
@@ -258,22 +314,16 @@ export const apiService = {
   deleteReport: async (id, user) => {
     try {
       const response = await apiClient.delete(`/reports/${id}`);
+      const currentCache = getPersistentReports();
+      const filtered = currentCache.filter(r => r.reportId !== parseInt(id));
+      setPersistentReports(filtered);
       return response.data.data;
     } catch {
-      const index = mockReports.findIndex(r => r.reportId === parseInt(id));
+      const currentCache = getPersistentReports();
+      const index = currentCache.findIndex(r => r.reportId === parseInt(id));
       if (index !== -1) {
-        const deleted = mockReports.splice(index, 1)[0];
-        mockAuditLogs.unshift({
-          id: mockAuditLogs.length + 1,
-          entityName: 'DailyDrillingReport',
-          entityId: id.toString(),
-          action: 'DELETE',
-          oldValue: `Status: ${deleted.reportStatus}, DrillHole: ${deleted.drillHole}`,
-          newValue: 'Deleted Draft Report',
-          changedBy: user?.name || 'Camp Executive',
-          ipAddress: '127.0.0.1',
-          timestamp: new Date().toISOString()
-        });
+        currentCache.splice(index, 1);
+        setPersistentReports(currentCache);
         return true;
       }
       return false;
@@ -285,22 +335,23 @@ export const apiService = {
       const response = await apiClient.get('/dashboard');
       return response.data.data;
     } catch {
+      const reports = getPersistentReports();
       const todayStr = new Date().toISOString().split('T')[0];
-      const approvedReports = mockReports.filter(r => r.reportStatus === 'APPROVED');
-      const totalMeters = mockReports.reduce((sum, r) => sum + (parseFloat(r.dailyProgress) || 0), 0);
+      const approvedReports = reports.filter(r => r.reportStatus === 'APPROVED');
+      const totalMeters = reports.reduce((sum, r) => sum + (parseFloat(r.dailyProgress) || 0), 0);
 
       return {
         totalCamps: mockCamps.length,
-        todayReports: mockReports.filter(r => r.reportDate === todayStr).length,
-        pendingReports: mockReports.filter(r => r.reportStatus === 'SUBMITTED').length,
+        todayReports: reports.filter(r => r.reportDate === todayStr).length,
+        pendingReports: reports.filter(r => r.reportStatus === 'SUBMITTED').length,
         approvedReports: approvedReports.length,
-        returnedReports: mockReports.filter(r => r.reportStatus === 'RETURNED').length,
-        draftReports: mockReports.filter(r => r.reportStatus === 'DRAFT').length,
+        returnedReports: reports.filter(r => r.reportStatus === 'RETURNED').length,
+        draftReports: reports.filter(r => r.reportStatus === 'DRAFT').length,
         totalMeterDrilled: parseFloat(totalMeters.toFixed(2)),
         monthlyProgress: parseFloat(totalMeters.toFixed(2)),
         yearlyProgress: parseFloat(totalMeters.toFixed(2)),
         campComparison: mockCamps.map(c => {
-          const campMeters = mockReports
+          const campMeters = reports
             .filter(r => r.campId === c.id)
             .reduce((sum, r) => sum + (parseFloat(r.dailyProgress) || 0), 0);
           return {
@@ -308,11 +359,12 @@ export const apiService = {
             totalMeters: parseFloat(campMeters.toFixed(2))
           };
         }),
-        recentActivities: [...mockReports],
-        pendingCorrections: mockReports.filter(r => r.reportStatus === 'RETURNED')
+        recentActivities: [...reports],
+        pendingCorrections: reports.filter(r => r.reportStatus === 'RETURNED')
       };
     }
   },
+
 
   // Camps CRUD
   getCamps: async () => {
