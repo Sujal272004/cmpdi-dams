@@ -1,5 +1,6 @@
 package in.gov.cmpdi.dams.dto;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import java.math.BigDecimal;
@@ -49,13 +50,24 @@ public class DailyReportDTO {
     private String formation;
     private BigDecimal coreRecovery;
     private BigDecimal waterLevel;
+
+    @NotBlank(message = "Operational remarks are required")
     private String remarks;
+
+    @NotBlank(message = "Block Name is required")
     private String blockName;
+
+    @NotBlank(message = "Borehole ID is required")
     private String boreholeId;
+
     private String bitNo;
 
+    @NotNull(message = "Borehole depth is required")
     private BigDecimal boreholeDepth;
+
+    @NotNull(message = "Borehole start date is required")
     private LocalDate boreholeStartDate;
+
     private BigDecimal workingHours;
     private BigDecimal dieselPump;
     private BigDecimal dieselRig;

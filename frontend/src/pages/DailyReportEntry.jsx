@@ -4,6 +4,8 @@ import { apiService } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import { Save, Send, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
+const Star = () => <span className="text-rose-500 font-bold ml-1" title="Mandatory Field">*</span>;
+
 export const DailyReportEntry = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -20,15 +22,16 @@ export const DailyReportEntry = () => {
     cumulativeDepth: '162.50',
     drillingStartTime: '06:00',
     drillingEndTime: '14:00',
-    // New fields
-    blockName: '',
-    boreholeId: '',
-    bitNo: '',
-    boreholeStartDate: '',
-    workingHours: '',
-    dieselPump: '',
-    dieselRig: '',
-    remarks: '',
+    // Mandatory Borehole & Remarks details
+    blockName: 'Block A',
+    boreholeId: 'BH-AND-04',
+    bitNo: 'BIT-SN-98472',
+    boreholeDepth: '162.50',
+    boreholeStartDate: new Date().toISOString().split('T')[0],
+    workingHours: '8.00',
+    dieselPump: '15.00',
+    dieselRig: '45.00',
+    remarks: 'Normal drilling operation in Shift A. Core recovery satisfactory.',
   });
 
   const [error, setError] = useState(null);
@@ -50,6 +53,22 @@ export const DailyReportEntry = () => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
+
+    // Validate mandatory fields
+    if (!formData.reportDate || !formData.campId || !formData.machineNumber?.trim() || !formData.drillHole?.trim()) {
+      setError("Please complete all basic identification mandatory fields (*).");
+      return;
+    }
+
+    if (!formData.blockName?.trim() || !formData.boreholeId?.trim() || !formData.boreholeDepth || !formData.boreholeStartDate) {
+      setError("Borehole details (Block Name, Borehole ID, Borehole Depth, Start Date) are mandatory fields (*).");
+      return;
+    }
+
+    if (!formData.remarks?.trim()) {
+      setError("Operational field remarks are mandatory (*).");
+      return;
+    }
 
     if (closingNum < openingNum) {
       setError("Closing depth cannot be less than opening depth.");
@@ -73,10 +92,10 @@ export const DailyReportEntry = () => {
         workingHours: parseFloat(formData.workingHours) || null,
         dieselPump: parseFloat(formData.dieselPump) || null,
         dieselRig: parseFloat(formData.dieselRig) || null,
-        remarks: formData.remarks || null,
-        blockName: formData.blockName || null,
-        boreholeId: formData.boreholeId || null,
-        bitNo: formData.bitNo || null,
+        remarks: formData.remarks.trim(),
+        blockName: formData.blockName.trim(),
+        boreholeId: formData.boreholeId.trim(),
+        bitNo: formData.bitNo ? formData.bitNo.trim() : null,
         reportStatus: status
       };
 
@@ -98,9 +117,14 @@ export const DailyReportEntry = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-xs border border-slate-200 dark:border-slate-700">
-        <h1 className="text-xl font-bold text-cmpdi-navy dark:text-sky-400">Daily Drilling Progress Entry</h1>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Submit official shift progress data for CMPDI exploration records</p>
+      <div className="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-xs border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-cmpdi-navy dark:text-sky-400">Daily Drilling Progress Entry</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Submit official shift progress data for CMPDI exploration records</p>
+        </div>
+        <div className="px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-[11px] font-semibold text-amber-800 dark:text-amber-300">
+          Fields marked with <span className="text-rose-500 font-bold">*</span> are mandatory
+        </div>
       </div>
 
       {error && (
@@ -124,7 +148,7 @@ export const DailyReportEntry = () => {
           <h3 className={sectionHeadClass}>1. Camp &amp; Drilling Identification</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <label className={labelClass}>Date</label>
+              <label className={labelClass}>Date<Star /></label>
               <input
                 type="date"
                 name="reportDate"
@@ -136,7 +160,7 @@ export const DailyReportEntry = () => {
             </div>
 
             <div>
-              <label className={labelClass}>Drilling Camp</label>
+              <label className={labelClass}>Drilling Camp<Star /></label>
               <select
                 name="campId"
                 value={formData.campId}
@@ -151,7 +175,7 @@ export const DailyReportEntry = () => {
             </div>
 
             <div>
-              <label className={labelClass}>Machine / Rig Number</label>
+              <label className={labelClass}>Machine / Rig Number<Star /></label>
               <input
                 type="text"
                 name="machineNumber"
@@ -164,7 +188,7 @@ export const DailyReportEntry = () => {
             </div>
 
             <div>
-              <label className={labelClass}>Drill Hole ID</label>
+              <label className={labelClass}>Drill Hole ID<Star /></label>
               <input
                 type="text"
                 name="drillHole"
@@ -183,7 +207,7 @@ export const DailyReportEntry = () => {
           <h3 className={sectionHeadClass}>2. Shift Timing &amp; Depth Progress</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <label className={labelClass}>Shift</label>
+              <label className={labelClass}>Shift<Star /></label>
               <select
                 name="shift"
                 value={formData.shift}
@@ -210,7 +234,7 @@ export const DailyReportEntry = () => {
             </div>
 
             <div>
-              <label className={labelClass}>Opening Depth (m)</label>
+              <label className={labelClass}>Opening Depth (m)<Star /></label>
               <input
                 type="number"
                 step="0.01"
@@ -223,7 +247,7 @@ export const DailyReportEntry = () => {
             </div>
 
             <div>
-              <label className={labelClass}>Closing Depth (m)</label>
+              <label className={labelClass}>Closing Depth (m)<Star /></label>
               <input
                 type="number"
                 step="0.01"
@@ -254,24 +278,26 @@ export const DailyReportEntry = () => {
           <h3 className={sectionHeadClass}>3. Borehole &amp; Bit Details</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <div>
-              <label className={labelClass}>Block Name</label>
+              <label className={labelClass}>Block Name<Star /></label>
               <input
                 type="text"
                 name="blockName"
                 value={formData.blockName}
                 onChange={handleChange}
+                required
                 placeholder="e.g. Block A"
                 className={inputClass}
               />
             </div>
 
             <div>
-              <label className={labelClass}>Borehole ID</label>
+              <label className={labelClass}>Borehole ID<Star /></label>
               <input
                 type="text"
                 name="boreholeId"
                 value={formData.boreholeId}
                 onChange={handleChange}
+                required
                 placeholder="e.g. BH-AND-01"
                 className={inputClass}
               />
@@ -290,25 +316,27 @@ export const DailyReportEntry = () => {
             </div>
 
             <div>
-              <label className={labelClass}>Borehole Depth (m)</label>
+              <label className={labelClass}>Borehole Depth (m)<Star /></label>
               <input
                 type="number"
                 step="0.01"
                 name="boreholeDepth"
                 value={formData.boreholeDepth}
                 onChange={handleChange}
+                required
                 placeholder="0.00"
                 className={inputClass}
               />
             </div>
 
             <div>
-              <label className={labelClass}>Borehole Start Date</label>
+              <label className={labelClass}>Borehole Start Date<Star /></label>
               <input
                 type="date"
                 name="boreholeStartDate"
                 value={formData.boreholeStartDate}
                 onChange={handleChange}
+                required
                 className={inputClass}
               />
             </div>
@@ -320,13 +348,14 @@ export const DailyReportEntry = () => {
         <div>
           <h3 className={sectionHeadClass}>4. Field Remarks</h3>
           <div>
-            <label className={labelClass}>Operational Remarks &amp; Observations</label>
+            <label className={labelClass}>Operational Remarks &amp; Observations<Star /></label>
             <textarea
               rows="4"
               name="remarks"
               value={formData.remarks}
               onChange={handleChange}
-              placeholder="Enter any specific field operational observations, delay reasons, formation notes, etc."
+              required
+              placeholder="Enter operational observations, delay reasons, formation notes, etc. (Required)"
               className={inputClass}
             />
           </div>
@@ -356,3 +385,4 @@ export const DailyReportEntry = () => {
     </div>
   );
 };
+
