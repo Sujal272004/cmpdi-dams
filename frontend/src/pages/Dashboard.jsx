@@ -183,6 +183,66 @@ const HQDashboard = ({ data, reload }) => {
         <KpiCard title="Yearly Target Achieved" value={data?.yearlyProgress ?? 0} unit="m" icon={Award} color="blue" subtext="Annual cumulative" />
       </div>
 
+      {/* Financial Year Comparison Card */}
+      <div className="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-xs border border-blue-200 dark:border-blue-900/60 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700 pb-3">
+          <div className="flex items-center gap-2">
+            <Award className="w-5 h-5 text-amber-500" />
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                Financial Year Achievement &amp; Comparison ({data?.currentFyLabel || 'FY 2026-27'})
+              </h3>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Comparing current financial year progress against previous year achievement ({data?.previousFyLabel || 'FY 2025-26'}). Auto-updates at the end of each FY (March 31).
+              </p>
+            </div>
+          </div>
+          <span className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1 self-start sm:self-auto ${
+            (data?.fyGrowthPercentage ?? 0) >= 0
+              ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300'
+              : 'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-300'
+          }`}>
+            <TrendingUp className="w-3.5 h-3.5" />
+            {data?.fyGrowthPercentage ?? 0}% vs Prev Year
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
+          <div className="p-3 bg-blue-50/60 dark:bg-blue-950/30 rounded-xl border border-blue-100 dark:border-blue-900 space-y-1">
+            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">
+              Current Year Progress ({data?.currentFyLabel || 'FY 2026-27'})
+            </span>
+            <strong className="text-xl font-extrabold text-blue-700 dark:text-sky-300 block">
+              {Math.round(data?.yearlyProgress || 0)} <span className="text-xs font-normal">meters</span>
+            </strong>
+            <span className="text-[10px] text-blue-600 dark:text-blue-400 block">April 1 to Present</span>
+          </div>
+
+          <div className="p-3 bg-amber-50/60 dark:bg-amber-950/30 rounded-xl border border-amber-100 dark:border-amber-900 space-y-1">
+            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">
+              Previous Year Achievement ({data?.previousFyLabel || 'FY 2025-26'})
+            </span>
+            <strong className="text-xl font-extrabold text-amber-700 dark:text-amber-300 block">
+              {Math.round(data?.previousYearAchievement || 0)} <span className="text-xs font-normal">meters</span>
+            </strong>
+            <span className="text-[10px] text-amber-600 dark:text-amber-400 block">Full Year Total (Apr 1 - Mar 31)</span>
+          </div>
+
+          <div className="p-3 bg-violet-50/60 dark:bg-violet-950/30 rounded-xl border border-violet-100 dark:border-violet-900 space-y-1 sm:col-span-2 md:col-span-1">
+            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">
+              Financial Year Status
+            </span>
+            <strong className="text-sm font-bold text-violet-800 dark:text-violet-300 block">
+              {(data?.yearlyProgress || 0) >= (data?.previousYearAchievement || 0) ? '🎯 Exceeded Previous Year' : '📈 In Progress towards FY Goal'}
+            </strong>
+            <span className="text-[10px] text-violet-600 dark:text-violet-400 block">
+              Auto-rolls over to next FY after March 31
+            </span>
+          </div>
+        </div>
+      </div>
+
+
       {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-white dark:bg-slate-800 p-5 rounded-xl shadow-xs border border-slate-200 dark:border-slate-700">

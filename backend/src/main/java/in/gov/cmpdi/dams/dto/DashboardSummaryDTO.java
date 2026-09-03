@@ -21,6 +21,11 @@ public class DashboardSummaryDTO {
     private BigDecimal totalMeterDrilled;
     private BigDecimal monthlyProgress;
     private BigDecimal yearlyProgress;
+    private BigDecimal previousYearAchievement;
+    private String currentFyLabel;
+    private String previousFyLabel;
+    private BigDecimal fyGrowthPercentage;
+
     
     private List<Map<String, Object>> campComparison;
     private List<Map<String, Object>> monthlyProgressTrend;

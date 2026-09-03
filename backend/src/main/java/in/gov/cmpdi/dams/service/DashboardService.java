@@ -26,7 +26,18 @@ public class DashboardService {
     public DashboardSummaryDTO getDashboardSummary() {
         LocalDate today = LocalDate.now();
         LocalDate firstDayOfMonth = today.withDayOfMonth(1);
-        LocalDate firstDayOfYear = today.withDayOfYear(1);
+
+        // Calculate Indian Financial Year (Apr 1 to Mar 31)
+        int currentYear = today.getYear();
+        int currentMonth = today.getMonthValue();
+        int currentFyStartYear = (currentMonth >= 4) ? currentYear : currentYear - 1;
+
+        LocalDate currentFyStartDate = LocalDate.of(currentFyStartYear, 4, 1);
+        String currentFyLabel = "FY " + currentFyStartYear + "-" + String.format("%02d", (currentFyStartYear + 1) % 100);
+
+        LocalDate previousFyStartDate = LocalDate.of(currentFyStartYear - 1, 4, 1);
+        LocalDate previousFyEndDate = LocalDate.of(currentFyStartYear, 3, 31);
+        String previousFyLabel = "FY " + (currentFyStartYear - 1) + "-" + String.format("%02d", currentFyStartYear % 100);
 
         long totalCamps = campRepository.findByIsDeletedFalse().size();
         long todayReports = reportRepository.countTodayReports(today);
@@ -37,7 +48,16 @@ public class DashboardService {
 
         BigDecimal totalMeterDrilled = reportRepository.sumTotalProgressMeters();
         BigDecimal monthlyProgress = reportRepository.sumProgressMetersBetweenDates(firstDayOfMonth, today);
-        BigDecimal yearlyProgress = reportRepository.sumProgressMetersBetweenDates(firstDayOfYear, today);
+        BigDecimal yearlyProgress = reportRepository.sumProgressMetersBetweenDates(currentFyStartDate, today);
+        BigDecimal previousYearAchievement = reportRepository.sumProgressMetersBetweenDates(previousFyStartDate, previousFyEndDate);
+
+        BigDecimal fyGrowthPercentage = BigDecimal.ZERO;
+        if (previousYearAchievement != null && previousYearAchievement.compareTo(BigDecimal.ZERO) > 0) {
+            fyGrowthPercentage = yearlyProgress
+                    .subtract(previousYearAchievement)
+                    .multiply(new BigDecimal("100"))
+                    .divide(previousYearAchievement, 1, java.math.RoundingMode.HALF_UP);
+        }
 
         // Camp Progress Comparison List
         List<Object[]> campStats = reportRepository.findCampProgressComparison();
@@ -56,13 +76,17 @@ public class DashboardService {
                 .approvedReports(approvedReports)
                 .returnedReports(returnedReports)
                 .draftReports(draftReports)
-
                 .totalMeterDrilled(totalMeterDrilled)
                 .monthlyProgress(monthlyProgress)
                 .yearlyProgress(yearlyProgress)
+                .previousYearAchievement(previousYearAchievement)
+                .currentFyLabel(currentFyLabel)
+                .previousFyLabel(previousFyLabel)
+                .fyGrowthPercentage(fyGrowthPercentage)
                 .campComparison(campComparison)
                 .recentActivities(dailyReportService.getAllReports(null, null).stream().limit(5).toList())
                 .pendingCorrections(dailyReportService.getAllReports(null, "RETURNED"))
                 .build();
     }
+
 }

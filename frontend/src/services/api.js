@@ -336,9 +336,22 @@ export const apiService = {
       return response.data.data;
     } catch {
       const reports = getPersistentReports();
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayObj = new Date();
+      const todayStr = todayObj.toISOString().split('T')[0];
+      
+      const currentYear = todayObj.getFullYear();
+      const currentMonth = todayObj.getMonth() + 1; // 1-12
+      const currentFyStartYear = (currentMonth >= 4) ? currentYear : currentYear - 1;
+      
+      const currentFyLabel = `FY ${currentFyStartYear}-${((currentFyStartYear + 1) % 100).toString().padStart(2, '0')}`;
+      const previousFyLabel = `FY ${currentFyStartYear - 1}-${(currentFyStartYear % 100).toString().padStart(2, '0')}`;
+
       const approvedReports = reports.filter(r => r.reportStatus === 'APPROVED');
       const totalMeters = reports.reduce((sum, r) => sum + (parseFloat(r.dailyProgress) || 0), 0);
+      const prevYearAchieve = 3600;
+      const growthPct = prevYearAchieve > 0 
+        ? parseFloat((((totalMeters - prevYearAchieve) / prevYearAchieve) * 100).toFixed(1))
+        : 0;
 
       return {
         totalCamps: mockCamps.length,
@@ -350,6 +363,10 @@ export const apiService = {
         totalMeterDrilled: parseFloat(totalMeters.toFixed(2)),
         monthlyProgress: parseFloat(totalMeters.toFixed(2)),
         yearlyProgress: parseFloat(totalMeters.toFixed(2)),
+        previousYearAchievement: prevYearAchieve,
+        currentFyLabel,
+        previousFyLabel,
+        fyGrowthPercentage: growthPct,
         campComparison: mockCamps.map(c => {
           const campMeters = reports
             .filter(r => r.campId === c.id)
@@ -364,6 +381,7 @@ export const apiService = {
       };
     }
   },
+
 
 
   // Camps CRUD
