@@ -348,10 +348,11 @@ export const apiService = {
 
       const approvedReports = reports.filter(r => r.reportStatus === 'APPROVED');
       const totalMeters = reports.reduce((sum, r) => sum + (parseFloat(r.dailyProgress) || 0), 0);
-      const prevYearAchieve = 3600;
+      const prevYearAchieve = 80000;
       const growthPct = prevYearAchieve > 0 
         ? parseFloat((((totalMeters - prevYearAchieve) / prevYearAchieve) * 100).toFixed(1))
         : 0;
+
 
       return {
         totalCamps: mockCamps.length,
