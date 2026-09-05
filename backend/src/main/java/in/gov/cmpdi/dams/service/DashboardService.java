@@ -47,8 +47,14 @@ public class DashboardService {
         long draftReports = reportRepository.countByStatus("DRAFT");
 
         BigDecimal totalMeterDrilled = reportRepository.sumTotalProgressMeters();
+        if (totalMeterDrilled == null) totalMeterDrilled = BigDecimal.ZERO;
+
         BigDecimal monthlyProgress = reportRepository.sumProgressMetersBetweenDates(firstDayOfMonth, today);
+        if (monthlyProgress == null) monthlyProgress = BigDecimal.ZERO;
+
         BigDecimal yearlyProgress = reportRepository.sumProgressMetersBetweenDates(currentFyStartDate, today);
+        if (yearlyProgress == null) yearlyProgress = BigDecimal.ZERO;
+
         BigDecimal dbPrevYear = reportRepository.sumProgressMetersBetweenDates(previousFyStartDate, previousFyEndDate);
         
         BigDecimal previousYearAchievement = (dbPrevYear != null && dbPrevYear.compareTo(BigDecimal.ZERO) > 0)
@@ -62,6 +68,7 @@ public class DashboardService {
                     .multiply(new BigDecimal("100"))
                     .divide(previousYearAchievement, 1, java.math.RoundingMode.HALF_UP);
         }
+
 
 
         // Camp Progress Comparison List
