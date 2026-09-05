@@ -348,6 +348,10 @@ export const apiService = {
 
       const approvedReports = reports.filter(r => r.reportStatus === 'APPROVED');
       const totalMeters = reports.reduce((sum, r) => sum + (parseFloat(r.dailyProgress) || 0), 0);
+      const firstDayOfMonthStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
+      const monthlyReports = reports.filter(r => r.reportDate && r.reportDate >= firstDayOfMonthStr && r.reportDate <= todayStr);
+      const monthlyMeters = monthlyReports.reduce((sum, r) => sum + (parseFloat(r.dailyProgress) || 0), 0);
+
       const prevYearAchieve = 80000;
       const growthPct = prevYearAchieve > 0 
         ? parseFloat((((totalMeters - prevYearAchieve) / prevYearAchieve) * 100).toFixed(1))
@@ -362,7 +366,7 @@ export const apiService = {
         returnedReports: reports.filter(r => r.reportStatus === 'RETURNED').length,
         draftReports: reports.filter(r => r.reportStatus === 'DRAFT').length,
         totalMeterDrilled: parseFloat(totalMeters.toFixed(2)),
-        monthlyProgress: parseFloat(totalMeters.toFixed(2)),
+        monthlyProgress: parseFloat(monthlyMeters.toFixed(2)),
         yearlyProgress: parseFloat(totalMeters.toFixed(2)),
         previousYearAchievement: prevYearAchieve,
         currentFyLabel,

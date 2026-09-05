@@ -336,7 +336,19 @@ const CampDashboard = ({ user, data, reload }) => {
   const myDraft      = campReports.filter(r => r.reportStatus === 'DRAFT').length;
   const myMeters     = campReports.reduce((s, r) => s + (parseFloat(r.dailyProgress) || 0), 0);
 
+  // Filter strictly for current month's progress
+  const now = new Date();
+  const curYr = now.getFullYear();
+  const curMo = now.getMonth();
+  const currentMonthReports = campReports.filter(r => {
+    if (!r.reportDate) return false;
+    const d = new Date(r.reportDate);
+    return d.getFullYear() === curYr && d.getMonth() === curMo;
+  });
+  const currentMonthMeters = currentMonthReports.reduce((s, r) => s + (parseFloat(r.dailyProgress) || 0), 0);
+
   // Dynamic weekly line chart data from recent reports
+
   const recent7 = campReports.slice(0, 7).reverse();
   const weeklyLine = {
     labels: recent7.length > 0 ? recent7.map(r => r.reportDate || r.drillHole || 'Day') : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
@@ -576,11 +588,12 @@ const CampDashboard = ({ user, data, reload }) => {
         <KpiCard title="Returned for Correction" value={myReturned} icon={RotateCcw} color="rose" subtext="Needs revision" />
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard title="My Meters Drilled" value={myMeters.toFixed(1)} unit="m" icon={Pickaxe} color="cyan" subtext="Approved records only" />
-        <KpiCard title="This Month's Progress" value={myMeters.toFixed(1)} unit="m" icon={TrendingUp} color="emerald" subtext="Current month drilling" />
+        <KpiCard title="My Meters Drilled" value={myMeters.toFixed(1)} unit="m" icon={Pickaxe} color="cyan" subtext="Cumulative approved depth" />
+        <KpiCard title="This Month's Progress" value={currentMonthMeters.toFixed(1)} unit="m" icon={TrendingUp} color="emerald" subtext="Current month drilling" />
         <KpiCard title="Yearly Total (2026)" value={yearlyTotal} unit="m" icon={Award} color="blue" subtext={`${yearlyPct}% of annual target`} />
         <KpiCard title="Avg. Daily Progress" value={myApproved > 0 ? (myMeters / myApproved).toFixed(1) : "0.0"} unit="m" icon={Activity} color="indigo" subtext="Per approved shift" />
       </div>
+
 
       {/* Yearly Cumulative Chart — Full Width */}
       <div className="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-xs border border-slate-200 dark:border-slate-700">
