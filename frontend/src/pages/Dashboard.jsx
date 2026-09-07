@@ -318,21 +318,28 @@ const HQDashboard = ({ data, reload }) => {
 // ─── CAMP EXECUTIVE DASHBOARD ──────────────────────────────────────────────────
 const CampDashboard = ({ user, data, reload }) => {
   const [campInfo, setCampInfo] = useState(null);
+  const [campReports, setCampReports] = useState([]);
 
   useEffect(() => {
-    const loadCampTargets = async () => {
+    const loadCampData = async () => {
       const camps = await apiService.getCamps();
       const current = camps.find(c => c.id === user.campId) || camps[0];
       setCampInfo(current);
-    };
-    loadCampTargets();
-  }, [user.campId]);
 
-  // Filter only this camp's reports
-  const campReports  = data?.recentActivities?.filter(r => r.campId === user.campId) || [];
+      const reports = await apiService.getReports({ campId: user.campId });
+      if (Array.isArray(reports) && reports.length > 0) {
+        setCampReports(reports);
+      } else if (data?.recentActivities) {
+        setCampReports(data.recentActivities.filter(r => r.campId === user.campId));
+      }
+    };
+    loadCampData();
+  }, [user.campId, data]);
+
   const myApproved   = campReports.filter(r => r.reportStatus === 'APPROVED').length;
   const myPending    = campReports.filter(r => r.reportStatus === 'SUBMITTED').length;
   const myReturned   = campReports.filter(r => r.reportStatus === 'RETURNED').length;
+
   const myDraft      = campReports.filter(r => r.reportStatus === 'DRAFT').length;
   const myMeters     = campReports.reduce((s, r) => s + (parseFloat(r.dailyProgress) || 0), 0);
 

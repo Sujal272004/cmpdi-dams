@@ -96,7 +96,8 @@ public class DashboardService {
                 .previousFyLabel(previousFyLabel)
                 .fyGrowthPercentage(fyGrowthPercentage)
                 .campComparison(campComparison)
-                .recentActivities(dailyReportService.getAllReports(null, null).stream().limit(5).toList())
+                .recentActivities(dailyReportService.getAllReports(null, null).stream().limit(100).toList())
+
                 .pendingCorrections(dailyReportService.getAllReports(null, "RETURNED"))
                 .build();
     }
