@@ -30,13 +30,12 @@ export const DailyReportEntry = () => {
   const [camps, setCamps] = useState([]);
   const [machines, setMachines] = useState([]);
   const [bits, setBits] = useState([]);
-  const [isCustomBit, setIsCustomBit] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
 
   const [formData, setFormData] = useState({
     reportDate: new Date().toISOString().split('T')[0],
     campId: user?.campId || 1,
-    machineNumber: user?.campId === 1 ? 'RIG-AND-101' : user?.campId === 2 ? 'RIG-MRP-201' : 'RIG-DGP-301',
+    machineNumber: user?.campId === 3 ? 'KME-1000-06' : 'DM-1000-13',
     shift: 'General Shift',
     plannedDepth: '',
     openingDepth: '148.00',
@@ -87,7 +86,7 @@ export const DailyReportEntry = () => {
         const campMachines = machineList.filter(m => m.campId === parseInt(initialCampId));
         const initialMachine = campMachines.length > 0
           ? campMachines[0].machineNumber
-          : (initialCampId === 1 ? 'RIG-AND-101' : initialCampId === 2 ? 'RIG-MRP-201' : 'RIG-DGP-301');
+          : (initialCampId === 3 ? 'KME-1000-06' : 'DM-1000-13');
 
         const nowMonthName = MONTH_NAMES[new Date().getMonth()];
         const target = getTargetForMachineAndMonth(machineList, initialMachine, nowMonthName);

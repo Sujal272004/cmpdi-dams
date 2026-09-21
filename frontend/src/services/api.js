@@ -77,11 +77,66 @@ const setPersistentReports = (reports) => {
 };
 
 const initialMockMachines = [
-  { id: 1, machineNumber: 'RIG-AND-101', machineName: 'Atlas Copco Explorac 235', machineType: 'Diamond Core Rig', campId: 1, campName: 'Anandwan Camp', campCode: 'CMPDI-AND-01', status: 'ACTIVE', operatorName: 'R. K. Yadav', monthlyTarget: 260, yearlyTarget: 3120, targetYear: 2026, monthwiseTargets: { Apr: 260, May: 260, Jun: 240, Jul: 180, Aug: 200, Sep: 250, Oct: 280, Nov: 300, Dec: 300, Jan: 290, Feb: 280, Mar: 280 } },
-  { id: 2, machineNumber: 'RIG-AND-102', machineName: 'Longyear 44 Rig', machineType: 'Hydrostatic Core Rig', campId: 1, campName: 'Anandwan Camp', campCode: 'CMPDI-AND-01', status: 'ACTIVE', operatorName: 'S. K. Mondal', monthlyTarget: 220, yearlyTarget: 2640, targetYear: 2026, monthwiseTargets: { Apr: 220, May: 220, Jun: 200, Jul: 150, Aug: 180, Sep: 210, Oct: 240, Nov: 250, Dec: 250, Jan: 240, Feb: 240, Mar: 240 } },
-  { id: 3, machineNumber: 'RIG-MRP-201', machineName: 'Voltas 90 Core Drill', machineType: 'Heavy Duty Core Drill', campId: 2, campName: 'Murpar Camp', campCode: 'CMPDI-MRP-02', status: 'ACTIVE', operatorName: 'G. C. Tiwari', monthlyTarget: 240, yearlyTarget: 2880, targetYear: 2026, monthwiseTargets: { Apr: 240, May: 240, Jun: 220, Jul: 160, Aug: 180, Sep: 220, Oct: 260, Nov: 280, Dec: 280, Jan: 270, Feb: 260, Mar: 270 } },
-  { id: 4, machineNumber: 'RIG-MRP-202', machineName: 'Kirloskar Rotary Rig', machineType: 'Rotary Drilling Rig', campId: 2, campName: 'Murpar Camp', campCode: 'CMPDI-MRP-02', status: 'STANDBY', operatorName: 'M. P. Rao', monthlyTarget: 180, yearlyTarget: 2160, targetYear: 2026, monthwiseTargets: { Apr: 180, May: 180, Jun: 160, Jul: 120, Aug: 140, Sep: 170, Oct: 200, Nov: 210, Dec: 210, Jan: 200, Feb: 190, Mar: 200 } },
-  { id: 5, machineNumber: 'RIG-DGP-301', machineName: 'Sandvik DE710', machineType: 'Diamond Core Rig', campId: 3, campName: 'Durgapur Camp', campCode: 'CMPDI-DGP-03', status: 'ACTIVE', operatorName: 'B. N. Ghosh', monthlyTarget: 320, yearlyTarget: 3840, targetYear: 2026, monthwiseTargets: { Apr: 320, May: 320, Jun: 300, Jul: 220, Aug: 250, Sep: 300, Oct: 350, Nov: 380, Dec: 380, Jan: 360, Feb: 340, Mar: 360 } }
+  {
+    id: 6,
+    machineNumber: 'DM-1000-13',
+    machineName: 'DM-1000-13',
+    machineType: 'Diamond Core Rig',
+    campId: 1,
+    campName: 'Anandwan Camp',
+    campCode: 'CMPDI-AND-01',
+    status: 'ACTIVE',
+    operatorName: '',
+    monthlyTarget: 360,
+    yearlyTarget: 6450,
+    targetYear: 2026,
+    monthwiseTargets: { Apr: 444, May: 444, Jun: 445, Jul: 340, Aug: 350, Sep: 360, Oct: 389, Nov: 445, Dec: 567, Jan: 778, Feb: 888, Mar: 1000 }
+  },
+  {
+    id: 7,
+    machineNumber: 'DM-1000-15',
+    machineName: 'DM-1000-15',
+    machineType: 'Diamond Core Rig',
+    campId: 1,
+    campName: 'Anandwan Camp',
+    campCode: 'CMPDI-AND-01',
+    status: 'ACTIVE',
+    operatorName: '',
+    monthlyTarget: 0,
+    yearlyTarget: 6445,
+    targetYear: 2026,
+    monthwiseTargets: { Apr: 444, May: 445, Jun: 444, Jul: 340, Aug: 345, Sep: 360, Oct: 389, Nov: 445, Dec: 567, Jan: 778, Feb: 888, Mar: 1000 }
+  },
+  {
+    id: 8,
+    machineNumber: 'DM-1000-22',
+    machineName: 'DM-1000-22',
+    machineType: 'Diamond Core Rig',
+    campId: 1,
+    campName: 'Anandwan Camp',
+    campCode: 'CMPDI-AND-01',
+    status: 'ACTIVE',
+    operatorName: '',
+    monthlyTarget: 0,
+    yearlyTarget: 6445,
+    targetYear: 2026,
+    monthwiseTargets: { Apr: 445, May: 444, Jun: 445, Jul: 340, Aug: 345, Sep: 360, Oct: 389, Nov: 444, Dec: 566, Jan: 777, Feb: 890, Mar: 1000 }
+  },
+  {
+    id: 9,
+    machineNumber: 'KME-1000-06',
+    machineName: 'KME-1000-06',
+    machineType: 'Diamond Core Rig',
+    campId: 3,
+    campName: 'Durgapur Camp',
+    campCode: 'CMPDI-DGP-03',
+    status: 'ACTIVE',
+    operatorName: '',
+    monthlyTarget: 250,
+    yearlyTarget: 6441,
+    targetYear: 2026,
+    monthwiseTargets: { Apr: 445, May: 445, Jun: 445, Jul: 340, Aug: 340, Sep: 360, Oct: 388, Nov: 444, Dec: 567, Jan: 778, Feb: 889, Mar: 1000 }
+  }
 ];
 
 const getPersistentMachines = () => {
@@ -104,12 +159,12 @@ const setPersistentMachines = (machines) => {
 };
 
 const initialMockBits = [
-  { id: 1, bitNumber: 'BIT-NX-98472', bitType: 'Diamond Core Bit', size: 'NX (75.7mm)', manufacturer: 'Boart Longyear', campId: 1, campName: 'Anandwan Camp', campCode: 'CMPDI-AND-01', assignedMachineNumber: 'RIG-AND-101', status: 'IN_USE', totalMetersDrilled: 412.5, issueDate: '2026-01-10', remarks: 'Primary core bit for Block A coal exploration' },
-  { id: 2, bitNumber: 'BIT-NX-98473', bitType: 'Surface Set Diamond', size: 'NX (75.7mm)', manufacturer: 'Christensen', campId: 1, campName: 'Anandwan Camp', campCode: 'CMPDI-AND-01', assignedMachineNumber: 'RIG-AND-102', status: 'IN_USE', totalMetersDrilled: 285.0, issueDate: '2026-02-01', remarks: 'Operational in Block B' },
-  { id: 3, bitNumber: 'BIT-HQ-55102', bitType: 'Impregnated Diamond', size: 'HQ (96mm)', manufacturer: 'Boart Longyear', campId: 1, campName: 'Anandwan Camp', campCode: 'CMPDI-AND-01', assignedMachineNumber: '', status: 'AVAILABLE', totalMetersDrilled: 0.0, issueDate: '2026-03-01', remarks: 'New stock reserved for deep overburden coring' },
-  { id: 4, bitNumber: 'BIT-BX-44120', bitType: 'TC Carbide Bit', size: 'BX (60mm)', manufacturer: 'Sandvik', campId: 2, campName: 'Murpar Camp', campCode: 'CMPDI-MRP-02', assignedMachineNumber: 'RIG-MRP-201', status: 'IN_USE', totalMetersDrilled: 360.2, issueDate: '2026-01-18', remarks: 'Used in Murpar central sector' },
-  { id: 5, bitNumber: 'BIT-TRC-7701', bitType: 'Tricone Roller Bit', size: '150mm', manufacturer: 'Atlas Copco', campId: 2, campName: 'Murpar Camp', campCode: 'CMPDI-MRP-02', assignedMachineNumber: 'RIG-MRP-202', status: 'MAINTENANCE', totalMetersDrilled: 198.4, issueDate: '2026-02-14', remarks: 'Sent for gauge retipping' },
-  { id: 6, bitNumber: 'BIT-PDC-3011', bitType: 'PDC Core Bit', size: 'NQ (75.7mm)', manufacturer: 'DCI Drilling', campId: 3, campName: 'Durgapur Camp', campCode: 'CMPDI-DGP-03', assignedMachineNumber: 'RIG-DGP-301', status: 'IN_USE', totalMetersDrilled: 520.8, issueDate: '2026-01-05', remarks: 'High penetration bit in Raniganj sandstone' },
+  { id: 1, bitNumber: 'BIT-NX-98472', bitType: 'Diamond Core Bit', size: 'NX (75.7mm)', manufacturer: 'Boart Longyear', campId: 1, campName: 'Anandwan Camp', campCode: 'CMPDI-AND-01', assignedMachineNumber: 'DM-1000-13', status: 'IN_USE', totalMetersDrilled: 412.5, issueDate: '2026-01-10', remarks: 'Primary core bit for Block A coal exploration' },
+  { id: 2, bitNumber: 'BIT-NX-98473', bitType: 'Surface Set Diamond', size: 'NX (75.7mm)', manufacturer: 'Christensen', campId: 1, campName: 'Anandwan Camp', campCode: 'CMPDI-AND-01', assignedMachineNumber: 'DM-1000-15', status: 'IN_USE', totalMetersDrilled: 285.0, issueDate: '2026-02-01', remarks: 'Operational in Block B' },
+  { id: 3, bitNumber: 'BIT-HQ-55102', bitType: 'Impregnated Diamond', size: 'HQ (96mm)', manufacturer: 'Boart Longyear', campId: 1, campName: 'Anandwan Camp', campCode: 'CMPDI-AND-01', assignedMachineNumber: 'DM-1000-22', status: 'AVAILABLE', totalMetersDrilled: 0.0, issueDate: '2026-03-01', remarks: 'New stock reserved for deep overburden coring' },
+  { id: 4, bitNumber: 'BIT-BX-44120', bitType: 'TC Carbide Bit', size: 'BX (60mm)', manufacturer: 'Sandvik', campId: 2, campName: 'Murpar Camp', campCode: 'CMPDI-MRP-02', assignedMachineNumber: '', status: 'AVAILABLE', totalMetersDrilled: 360.2, issueDate: '2026-01-18', remarks: 'Used in Murpar central sector' },
+  { id: 5, bitNumber: 'BIT-TRC-7701', bitType: 'Tricone Roller Bit', size: '150mm', manufacturer: 'Atlas Copco', campId: 2, campName: 'Murpar Camp', campCode: 'CMPDI-MRP-02', assignedMachineNumber: '', status: 'MAINTENANCE', totalMetersDrilled: 198.4, issueDate: '2026-02-14', remarks: 'Sent for gauge retipping' },
+  { id: 6, bitNumber: 'BIT-PDC-3011', bitType: 'PDC Core Bit', size: 'NQ (75.7mm)', manufacturer: 'DCI Drilling', campId: 3, campName: 'Durgapur Camp', campCode: 'CMPDI-DGP-03', assignedMachineNumber: 'KME-1000-06', status: 'IN_USE', totalMetersDrilled: 520.8, issueDate: '2026-01-05', remarks: 'High penetration bit in Raniganj sandstone' },
   { id: 7, bitNumber: 'BIT-NX-88210', bitType: 'Diamond Core Bit', size: 'NX (75.7mm)', manufacturer: 'Christensen', campId: 3, campName: 'Durgapur Camp', campCode: 'CMPDI-DGP-03', assignedMachineNumber: '', status: 'WORN_OUT', totalMetersDrilled: 680.5, issueDate: '2025-11-20', remarks: 'Completed 680m drilling run; retired' }
 ];
 
