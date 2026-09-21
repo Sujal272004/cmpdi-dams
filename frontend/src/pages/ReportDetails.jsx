@@ -23,6 +23,7 @@ export const ReportDetails = () => {
   const { user } = useAuth();
 
   const [report, setReport] = useState(null);
+  const [bits, setBits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [showReturnModal, setShowReturnModal] = useState(false);
@@ -38,9 +39,13 @@ export const ReportDetails = () => {
 
   const fetchDetail = async () => {
     setLoading(true);
-    const data = await apiService.getReportById(id);
+    const [data, bitsData] = await Promise.all([
+      apiService.getReportById(id),
+      apiService.getBits().catch(() => [])
+    ]);
     setReport(data);
     setEditForm(data || {});
+    setBits(bitsData || []);
     // Auto open edit mode if coming from edit button or query param or if report is RETURNED
     if (data?.reportStatus === 'RETURNED' || location.search.includes('edit=true') || location.state?.edit) {
       setIsEditing(true);
@@ -106,8 +111,10 @@ export const ReportDetails = () => {
       plannedDepth: parseFloat(editForm?.plannedDepth) || 0,
       boreholeDepth: parseFloat(editForm?.boreholeDepth) || null,
       workingHours: parseFloat(editForm?.workingHours) || null,
+      preventiveHours: parseFloat(editForm?.preventiveHours) || 0,
       dieselPump: parseFloat(editForm?.dieselPump) || null,
       dieselRig: parseFloat(editForm?.dieselRig) || null,
+      drillHole: editForm?.drillHole || editForm?.boreholeId || editForm?.machineNumber,
       reportStatus: targetStatus || editForm?.reportStatus
     };
 
@@ -252,11 +259,10 @@ export const ReportDetails = () => {
           {/* Section 1: Identification */}
           <div>
             <h3 className={secHeadCls}>1. Operational Identification</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
               <div><span className="text-slate-500">Report Date:</span><p className="font-bold text-slate-900 dark:text-white mt-0.5">{report.reportDate}</p></div>
               <div><span className="text-slate-500">Drilling Camp:</span><p className="font-bold text-slate-900 dark:text-white mt-0.5">{report.campName}</p></div>
               <div><span className="text-slate-500">Machine / Rig ID:</span><p className="font-bold text-slate-900 dark:text-white mt-0.5">{report.machineNumber}</p></div>
-              <div><span className="text-slate-500">Drill Hole ID:</span><p className="font-bold text-slate-900 dark:text-white mt-0.5">{report.drillHole}</p></div>
             </div>
           </div>
 
@@ -286,10 +292,25 @@ export const ReportDetails = () => {
             </div>
           </div>
 
-          {/* Section 4: Field Remarks */}
+          {/* Section 4: Operational Parameters & Field Remarks */}
           <div>
-            <h3 className={secHeadCls}>4. Field Remarks</h3>
+            <h3 className={secHeadCls}>4. Operational Parameters &amp; Field Remarks</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs mb-3">
+              <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                <span className="text-slate-500 block mb-0.5">Preventive Hrs:</span>
+                <p className="font-bold text-slate-900 dark:text-white">{report.preventiveHours != null ? `${report.preventiveHours} hrs` : '0.00 hrs'}</p>
+              </div>
+              <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                <span className="text-slate-500 block mb-0.5">Diesel in Pump:</span>
+                <p className="font-bold text-slate-900 dark:text-white">{report.dieselPump != null ? `${report.dieselPump} L` : '—'}</p>
+              </div>
+              <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                <span className="text-slate-500 block mb-0.5">Diesel in Rig:</span>
+                <p className="font-bold text-slate-900 dark:text-white">{report.dieselRig != null ? `${report.dieselRig} L` : '—'}</p>
+              </div>
+            </div>
             <div className="text-xs">
+              <span className="text-slate-500 block mb-1">Operational Remarks:</span>
               <p className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 font-medium text-slate-800 dark:text-slate-200">
                 {report.remarks || 'No specific remarks entered.'}
               </p>
@@ -335,10 +356,10 @@ export const ReportDetails = () => {
 
           {/* Section 1: Identification */}
           <div>
-            <h4 className={secHeadCls}>1. Operational Identification</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <h4 className={secHeadCls}>1. Basic Identification</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className={labelCls}>Date</label>
+                <label className={labelCls}>Report Date</label>
                 <input
                   type="date"
                   name="reportDate"
@@ -373,17 +394,6 @@ export const ReportDetails = () => {
                   className={inputCls}
                 />
               </div>
-              <div>
-                <label className={labelCls}>Drill Hole ID</label>
-                <input
-                  type="text"
-                  name="drillHole"
-                  value={editForm.drillHole || ''}
-                  onChange={handleEditChange}
-                  required
-                  className={inputCls}
-                />
-              </div>
             </div>
           </div>
 
@@ -395,14 +405,13 @@ export const ReportDetails = () => {
                 <label className={labelCls}>Shift</label>
                 <select
                   name="shift"
-                  value={editForm.shift || ''}
+                  value={editForm.shift || 'General Shift'}
                   onChange={handleEditChange}
                   required
                   className={inputCls}
                 >
-                  <option value="SHIFT_A">Shift A (06:00 - 14:00)</option>
-                  <option value="SHIFT_B">Shift B (14:00 - 22:00)</option>
-                  <option value="SHIFT_C">Shift C (22:00 - 06:00)</option>
+                  <option value="General Shift">General Shift (06:00 AM - 6:00 PM)</option>
+                  <option value="Night Shift">Night Shift (6:00 PM - 06:00 AM)</option>
                 </select>
               </div>
               <div>
@@ -483,13 +492,24 @@ export const ReportDetails = () => {
               </div>
               <div>
                 <label className={labelCls}>Bit No. (Manufacturer S/N)</label>
-                <input
-                  type="text"
+                <select
                   name="bitNo"
                   value={editForm.bitNo || ''}
                   onChange={handleEditChange}
                   className={inputCls}
-                />
+                >
+                  <option value="">-- Select Drill Bit --</option>
+                  {bits
+                    .filter(b => !report?.campId || b.campId === parseInt(report.campId))
+                    .map(b => (
+                      <option key={b.id || b.bitNumber} value={b.bitNumber}>
+                        {b.bitNumber} — {b.bitType} ({b.size}) {b.assignedMachineNumber ? `[Rig: ${b.assignedMachineNumber}]` : '[Stock]'}
+                      </option>
+                    ))}
+                  {editForm.bitNo && !bits.some(b => b.bitNumber === editForm.bitNo) && (
+                    <option value={editForm.bitNo}>{editForm.bitNo} (Current / Assigned)</option>
+                  )}
+                </select>
               </div>
               <div>
                 <label className={labelCls}>Borehole Depth (m)</label>
@@ -515,9 +535,50 @@ export const ReportDetails = () => {
             </div>
           </div>
 
-          {/* Section 4: Field Remarks */}
+          {/* Section 4: Operational Parameters & Field Remarks */}
           <div>
-            <h4 className={secHeadCls}>4. Field Remarks</h4>
+            <h4 className={secHeadCls}>4. Operational Parameters &amp; Field Remarks</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-3">
+              <div>
+                <label className={labelCls}>Preventive Hrs (hrs)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  name="preventiveHours"
+                  value={editForm.preventiveHours || ''}
+                  onChange={handleEditChange}
+                  placeholder="e.g. 1.50"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>Diesel in Pump (liters)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  name="dieselPump"
+                  value={editForm.dieselPump || ''}
+                  onChange={handleEditChange}
+                  placeholder="e.g. 15.00"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>Diesel in Rig (liters)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  name="dieselRig"
+                  value={editForm.dieselRig || ''}
+                  onChange={handleEditChange}
+                  placeholder="e.g. 45.00"
+                  className={inputCls}
+                />
+              </div>
+            </div>
             <div>
               <label className={labelCls}>Operational Remarks &amp; Observations</label>
               <textarea

@@ -97,6 +97,7 @@ public class DailyReportService {
                 .boreholeDepth(dto.getBoreholeDepth())
                 .boreholeStartDate(dto.getBoreholeStartDate())
                 .workingHours(dto.getWorkingHours())
+                .preventiveHours(dto.getPreventiveHours())
                 .dieselPump(dto.getDieselPump())
                 .dieselRig(dto.getDieselRig())
                 .latitude(dto.getLatitude())
@@ -148,6 +149,7 @@ public class DailyReportService {
         report.setBoreholeDepth(dto.getBoreholeDepth());
         report.setBoreholeStartDate(dto.getBoreholeStartDate());
         report.setWorkingHours(dto.getWorkingHours());
+        report.setPreventiveHours(dto.getPreventiveHours());
         report.setDieselPump(dto.getDieselPump());
         report.setDieselRig(dto.getDieselRig());
         report.setLatitude(dto.getLatitude());
@@ -257,6 +259,7 @@ public class DailyReportService {
                 .boreholeDepth(r.getBoreholeDepth())
                 .boreholeStartDate(r.getBoreholeStartDate())
                 .workingHours(r.getWorkingHours())
+                .preventiveHours(r.getPreventiveHours())
                 .dieselPump(r.getDieselPump())
                 .dieselRig(r.getDieselRig())
                 .latitude(r.getLatitude())

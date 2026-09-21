@@ -25,6 +25,8 @@ public class DashboardSummaryDTO {
     private String currentFyLabel;
     private String previousFyLabel;
     private BigDecimal fyGrowthPercentage;
+    private BigDecimal currentFyTarget;
+    private BigDecimal riIvCurrentFyTarget;
 
     
     private List<Map<String, Object>> campComparison;

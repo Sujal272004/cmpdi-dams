@@ -98,6 +98,9 @@ public class DailyDrillingReport {
     @Column(name = "working_hours", precision = 5, scale = 2)
     private BigDecimal workingHours;
 
+    @Column(name = "preventive_hours", precision = 5, scale = 2)
+    private BigDecimal preventiveHours;
+
     @Column(name = "diesel_pump", precision = 8, scale = 2)
     private BigDecimal dieselPump;
 

@@ -30,7 +30,7 @@ const tooltipDefaults = {
 };
 
 // ─── ADMIN / DEPT-EXEC FULL DASHBOARD ─────────────────────────────────────────
-const HQDashboard = ({ data, reload }) => {
+const HQDashboard = ({ data, reload, totalRiIvTarget = 0 }) => {
   const lineChartData = {
     labels: ['1 Jul', '5 Jul', '10 Jul', '15 Jul', '20 Jul', '25 Jul', '30 Jul'],
     datasets: [
@@ -172,15 +172,29 @@ const HQDashboard = ({ data, reload }) => {
         <KpiCard title="Active Drilling Camps" value={data?.totalCamps ?? 0} icon={Building2} color="blue" subtext="Anandwan, Murpar, Durgapur" />
         <KpiCard title="Today's Entries" value={data?.todayReports ?? 0} icon={CalendarCheck2} color="indigo" subtext="Daily reports generated" />
         <KpiCard title="Pending Review" value={data?.pendingReports ?? 0} icon={Clock} color="amber" subtext="Awaiting HQ Approval" />
-        <KpiCard title="Approved Reports" value={data?.approvedReports ?? 0} icon={CheckCircle2} color="emerald" subtext="Locked & Verified" />
+        <KpiCard title="Returned Corrections" value={data?.returnedReports ?? 0} icon={RotateCcw} color="rose" subtext="Action Required" />
       </div>
 
       {/* KPI Row 2 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard title="Returned Corrections" value={data?.returnedReports ?? 0} icon={RotateCcw} color="rose" subtext="Action Required" />
-        <KpiCard title="Total Meters Drilled" value={data?.totalMeterDrilled ?? 0} unit="m" icon={Pickaxe} color="cyan" subtext="Cumulative depth achieved" />
+        <KpiCard
+          title="RI-IV Current FY Target"
+          value={totalRiIvTarget.toLocaleString()}
+          unit="m"
+          icon={Target}
+          color="amber"
+          subtext="Combined target of all camps"
+        />
+        <KpiCard
+          title="Yearly Target Achieved"
+          value={data?.yearlyProgress ?? 0}
+          unit="m"
+          icon={Award}
+          color="blue"
+          subtext={totalRiIvTarget > 0 ? `${((data?.yearlyProgress || 0) / totalRiIvTarget * 100).toFixed(1)}% of FY target` : "Annual cumulative"}
+        />
         <KpiCard title="Monthly Progress" value={data?.monthlyProgress ?? 0} unit="m" icon={TrendingUp} color="emerald" subtext="Current month drilling" />
-        <KpiCard title="Yearly Target Achieved" value={data?.yearlyProgress ?? 0} unit="m" icon={Award} color="blue" subtext="Annual cumulative" />
+        <KpiCard title="Total Meters Drilled" value={data?.totalMeterDrilled ?? 0} unit="m" icon={Pickaxe} color="cyan" subtext="Cumulative depth achieved" />
       </div>
 
       {/* Financial Year Comparison Card */}
@@ -193,7 +207,7 @@ const HQDashboard = ({ data, reload }) => {
                 Financial Year Achievement &amp; Comparison ({data?.currentFyLabel || 'FY 2026-27'})
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Comparing current financial year progress against previous year achievement ({data?.previousFyLabel || 'FY 2025-26'}). Auto-updates at the end of each FY (March 31).
+                Comparing current financial year progress against target &amp; previous year achievement ({data?.previousFyLabel || 'FY 2025-26'}). Auto-updates at the end of each FY (March 31).
               </p>
             </div>
           </div>
@@ -207,7 +221,17 @@ const HQDashboard = ({ data, reload }) => {
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+          <div className="p-3 bg-amber-50/70 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-900 space-y-1">
+            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">
+              RI-IV Current FY Target
+            </span>
+            <strong className="text-xl font-extrabold text-amber-700 dark:text-amber-300 block">
+              {totalRiIvTarget.toLocaleString()} <span className="text-xs font-normal">meters</span>
+            </strong>
+            <span className="text-[10px] text-amber-600 dark:text-amber-400 block">Combined Total of All Camps</span>
+          </div>
+
           <div className="p-3 bg-blue-50/60 dark:bg-blue-950/30 rounded-xl border border-blue-100 dark:border-blue-900 space-y-1">
             <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">
               Current Year Progress ({data?.currentFyLabel || 'FY 2026-27'})
@@ -218,22 +242,22 @@ const HQDashboard = ({ data, reload }) => {
             <span className="text-[10px] text-blue-600 dark:text-blue-400 block">April 1 to Present</span>
           </div>
 
-          <div className="p-3 bg-amber-50/60 dark:bg-amber-950/30 rounded-xl border border-amber-100 dark:border-amber-900 space-y-1">
+          <div className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
             <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">
               Previous Year Achievement ({data?.previousFyLabel || 'FY 2025-26'})
             </span>
-            <strong className="text-xl font-extrabold text-amber-700 dark:text-amber-300 block">
+            <strong className="text-xl font-extrabold text-slate-700 dark:text-slate-300 block">
               {Math.round(data?.previousYearAchievement || 0)} <span className="text-xs font-normal">meters</span>
             </strong>
-            <span className="text-[10px] text-amber-600 dark:text-amber-400 block">Full Year Total (Apr 1 - Mar 31)</span>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Full Year Total (Apr 1 - Mar 31)</span>
           </div>
 
-          <div className="p-3 bg-violet-50/60 dark:bg-violet-950/30 rounded-xl border border-violet-100 dark:border-violet-900 space-y-1 sm:col-span-2 md:col-span-1">
+          <div className="p-3 bg-violet-50/60 dark:bg-violet-950/30 rounded-xl border border-violet-100 dark:border-violet-900 space-y-1">
             <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">
               Financial Year Status
             </span>
             <strong className="text-sm font-bold text-violet-800 dark:text-violet-300 block">
-              {(data?.yearlyProgress || 0) >= (data?.previousYearAchievement || 0) ? '🎯 Exceeded Previous Year' : '📈 In Progress towards FY Goal'}
+              {totalRiIvTarget > 0 ? `${((data?.yearlyProgress || 0) / totalRiIvTarget * 100).toFixed(1)}% of Target Achieved` : 'Target in Progress'}
             </strong>
             <span className="text-[10px] text-violet-600 dark:text-violet-400 block">
               Auto-rolls over to next FY after March 31
@@ -316,7 +340,7 @@ const HQDashboard = ({ data, reload }) => {
 };
 
 // ─── CAMP EXECUTIVE DASHBOARD ──────────────────────────────────────────────────
-const CampDashboard = ({ user, data, reload }) => {
+const CampDashboard = ({ user, data, reload, totalRiIvTarget = 0 }) => {
   const [campInfo, setCampInfo] = useState(null);
   const [campReports, setCampReports] = useState([]);
 
@@ -590,15 +614,22 @@ const CampDashboard = ({ user, data, reload }) => {
       {/* KPI Cards — camp-specific */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard title="My Total Reports" value={campReports.length} icon={CalendarCheck2} color="blue" subtext="All submitted entries" />
-        <KpiCard title="Approved & Locked" value={myApproved} icon={CheckCircle2} color="emerald" subtext="Verified by HQ" />
         <KpiCard title="Pending HQ Review" value={myPending} icon={Clock} color="amber" subtext="Awaiting approval" />
         <KpiCard title="Returned for Correction" value={myReturned} icon={RotateCcw} color="rose" subtext="Needs revision" />
+        <KpiCard title="Avg. Daily Progress" value={myApproved > 0 ? (myMeters / myApproved).toFixed(1) : "0.0"} unit="m" icon={Activity} color="indigo" subtext="Per approved shift" />
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard title="My Meters Drilled" value={myMeters.toFixed(1)} unit="m" icon={Pickaxe} color="cyan" subtext="Cumulative approved depth" />
+        <KpiCard
+          title="RI-IV Current FY Target"
+          value={totalRiIvTarget.toLocaleString()}
+          unit="m"
+          icon={Target}
+          color="amber"
+          subtext="Combined region target"
+        />
+        <KpiCard title="Yearly Total (2026)" value={yearlyTotal} unit="m" icon={Award} color="blue" subtext={`${yearlyPct}% of camp target`} />
         <KpiCard title="This Month's Progress" value={currentMonthMeters.toFixed(1)} unit="m" icon={TrendingUp} color="emerald" subtext="Current month drilling" />
-        <KpiCard title="Yearly Total (2026)" value={yearlyTotal} unit="m" icon={Award} color="blue" subtext={`${yearlyPct}% of annual target`} />
-        <KpiCard title="Avg. Daily Progress" value={myApproved > 0 ? (myMeters / myApproved).toFixed(1) : "0.0"} unit="m" icon={Activity} color="indigo" subtext="Per approved shift" />
+        <KpiCard title="My Meters Drilled" value={myMeters.toFixed(1)} unit="m" icon={Pickaxe} color="cyan" subtext="Cumulative approved depth" />
       </div>
 
 
@@ -746,13 +777,23 @@ const CampDashboard = ({ user, data, reload }) => {
 export const Dashboard = () => {
   const { user } = useAuth();
   const [data, setData] = useState(null);
+  const [machines, setMachines] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const loadDashboard = async () => {
     setLoading(true);
-    const summary = await apiService.getDashboardSummary();
-    setData(summary);
-    setLoading(false);
+    try {
+      const [summary, machList] = await Promise.all([
+        apiService.getDashboardSummary(),
+        apiService.getMachines()
+      ]);
+      setData(summary);
+      setMachines(machList || []);
+    } catch (err) {
+      console.error("Error loading dashboard data:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { loadDashboard(); }, []);
@@ -768,9 +809,14 @@ export const Dashboard = () => {
     );
   }
 
+  // Combined target across all camps for current financial year
+  const totalRiIvTarget = machines.length > 0
+    ? machines.reduce((sum, m) => sum + (parseFloat(m.yearlyTarget) || 0), 0)
+    : (parseFloat(data?.riIvCurrentFyTarget || data?.currentFyTarget) || 0);
+
   const isCampExec = user?.role === 'ROLE_CAMP_EXEC';
 
   return isCampExec
-    ? <CampDashboard user={user} data={data} reload={loadDashboard} />
-    : <HQDashboard data={data} reload={loadDashboard} />;
+    ? <CampDashboard user={user} data={data} reload={loadDashboard} totalRiIvTarget={totalRiIvTarget} />
+    : <HQDashboard data={data} reload={loadDashboard} totalRiIvTarget={totalRiIvTarget} />;
 };

@@ -69,6 +69,7 @@ public class DailyReportDTO {
     private LocalDate boreholeStartDate;
 
     private BigDecimal workingHours;
+    private BigDecimal preventiveHours;
     private BigDecimal dieselPump;
     private BigDecimal dieselRig;
     private BigDecimal latitude;

@@ -17,6 +17,15 @@ public class DatabaseConfig {
 
     private static final Logger log = LoggerFactory.getLogger(DatabaseConfig.class);
 
+    @org.springframework.beans.factory.annotation.Value("${spring.datasource.url:}")
+    private String configuredUrl;
+
+    @org.springframework.beans.factory.annotation.Value("${spring.datasource.username:}")
+    private String configuredUsername;
+
+    @org.springframework.beans.factory.annotation.Value("${spring.datasource.password:}")
+    private String configuredPassword;
+
     @Bean
     @Primary
     @Profile("prod")
@@ -28,14 +37,24 @@ public class DatabaseConfig {
         if (dbUrl == null || dbUrl.trim().isEmpty()) {
             dbUrl = System.getenv("POSTGRES_URL");
         }
+        if ((dbUrl == null || dbUrl.trim().isEmpty()) && configuredUrl != null && !configuredUrl.trim().isEmpty()) {
+            dbUrl = configuredUrl;
+        }
 
         String username = System.getenv("SPRING_DATASOURCE_USERNAME");
         if (username == null || username.trim().isEmpty()) {
             username = System.getenv("DATABASE_USERNAME");
         }
+        if ((username == null || username.trim().isEmpty()) && configuredUsername != null && !configuredUsername.trim().isEmpty()) {
+            username = configuredUsername;
+        }
+
         String password = System.getenv("SPRING_DATASOURCE_PASSWORD");
         if (password == null || password.trim().isEmpty()) {
             password = System.getenv("DATABASE_PASSWORD");
+        }
+        if ((password == null || password.trim().isEmpty()) && configuredPassword != null && !configuredPassword.trim().isEmpty()) {
+            password = configuredPassword;
         }
 
         // Local default fallback

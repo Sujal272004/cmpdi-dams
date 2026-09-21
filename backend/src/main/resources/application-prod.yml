@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: ${SPRING_DATASOURCE_URL:${DATABASE_URL:${POSTGRES_URL:jdbc:postgresql://localhost:5432/cmpdi_dams}}}
-    username: ${SPRING_DATASOURCE_USERNAME:${DATABASE_USERNAME:postgres}}
-    password: ${SPRING_DATASOURCE_PASSWORD:${DATABASE_PASSWORD:Sujal@123}}
+    url: ${SPRING_DATASOURCE_URL:${DATABASE_URL:${POSTGRES_URL:jdbc:postgresql://dpg-da966pdg1s2s739c3et0-a.singapore-postgres.render.com:5432/cmpdi_dams_db?sslmode=require}}}
+    username: ${SPRING_DATASOURCE_USERNAME:${DATABASE_USERNAME:cmpdi_dams_db_user}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${DATABASE_PASSWORD:gL3E5s486Cj9VDbNDNQGyEr04wk96GZ3}}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 15

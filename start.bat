@@ -1,7 +1,7 @@
 @echo off
-set "NODE_DIR=C:\Users\95000033\Downloads\DPR_Portal-main\DPR_Portal-main\.tools\node-v20.12.2-win-x64"
-set "JAVA_HOME=C:\Users\95000033\Downloads\DPR_Portal-main\DPR_Portal-main\.tools\jdk-21.0.3+9"
-set "MVN_DIR=C:\Users\95000033\Downloads\DPR_Portal-main\DPR_Portal-main\.tools\apache-maven-3.9.6\bin"
+set "NODE_DIR=%~dp0.tools\node"
+set "JAVA_HOME=%~dp0.tools\jdk-21.0.3+9"
+set "MVN_DIR=%~dp0.tools\apache-maven-3.9.6\bin"
 
 set "PATH=%JAVA_HOME%\bin;%MVN_DIR%;%NODE_DIR%;%PATH%"
 

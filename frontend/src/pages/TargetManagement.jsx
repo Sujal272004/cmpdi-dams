@@ -319,8 +319,8 @@ export const TargetManagement = () => {
                     <input
                       type="number"
                       min="0"
-                      step="1"
-                      value={formState.months[m] ?? 0}
+                      step="any"
+                      value={formState.months[m] !== undefined ? formState.months[m] : ''}
                       onChange={e => handleSingleMonthChange(m, e.target.value)}
                       placeholder="0"
                       className="w-full p-2 text-xs font-extrabold border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"

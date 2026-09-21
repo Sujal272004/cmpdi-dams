@@ -21,6 +21,8 @@ import { Analytics } from './pages/Analytics';
 import { ExportCenter } from './pages/ExportCenter';
 import { CampManagement } from './pages/CampManagement';
 import { TargetManagement } from './pages/TargetManagement';
+import { MachineManagement } from './pages/MachineManagement';
+import { BitManagement } from './pages/BitManagement';
 import { UserManagement } from './pages/UserManagement';
 import { AuditLogs } from './pages/AuditLogs';
 import { Settings } from './pages/Settings';
@@ -53,6 +55,8 @@ const ProtectedLayout = () => {
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/export" element={<ExportCenter />} />
             <Route path="/camps" element={<CampManagement />} />
+            <Route path="/machines" element={<MachineManagement />} />
+            <Route path="/bits" element={<BitManagement />} />
             <Route path="/targets" element={<TargetManagement />} />
             <Route path="/users" element={<UserManagement />} />
             <Route path="/audit-logs" element={<AuditLogs />} />

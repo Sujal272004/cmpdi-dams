@@ -3,6 +3,7 @@ package in.gov.cmpdi.dams.service;
 import in.gov.cmpdi.dams.dto.DashboardSummaryDTO;
 import in.gov.cmpdi.dams.repository.CampRepository;
 import in.gov.cmpdi.dams.repository.DailyDrillingReportRepository;
+import in.gov.cmpdi.dams.repository.DrillingMachineRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +21,7 @@ public class DashboardService {
 
     private final CampRepository campRepository;
     private final DailyDrillingReportRepository reportRepository;
+    private final DrillingMachineRepository machineRepository;
     private final DailyReportService dailyReportService;
 
     @Transactional(readOnly = true)
@@ -81,6 +83,11 @@ public class DashboardService {
             campComparison.add(map);
         }
 
+        // Combined target across all camps for the current financial year
+        BigDecimal currentFyTarget = machineRepository.findByIsDeletedFalse().stream()
+                .map(m -> m.getYearlyTarget() != null ? m.getYearlyTarget() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         return DashboardSummaryDTO.builder()
                 .totalCamps(totalCamps)
                 .todayReports(todayReports)
@@ -91,13 +98,14 @@ public class DashboardService {
                 .totalMeterDrilled(totalMeterDrilled)
                 .monthlyProgress(monthlyProgress)
                 .yearlyProgress(yearlyProgress)
+                .currentFyTarget(currentFyTarget)
+                .riIvCurrentFyTarget(currentFyTarget)
                 .previousYearAchievement(previousYearAchievement)
                 .currentFyLabel(currentFyLabel)
                 .previousFyLabel(previousFyLabel)
                 .fyGrowthPercentage(fyGrowthPercentage)
                 .campComparison(campComparison)
                 .recentActivities(dailyReportService.getAllReports(null, null).stream().limit(100).toList())
-
                 .pendingCorrections(dailyReportService.getAllReports(null, "RETURNED"))
                 .build();
     }

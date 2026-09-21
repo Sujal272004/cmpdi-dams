@@ -19,6 +19,8 @@ import {
   User,
   Compass,
   KeyRound,
+  Cpu,
+  Disc,
   X
 } from 'lucide-react';
 
@@ -43,6 +45,8 @@ export const Sidebar = ({ isOpen, onClose }) => {
   ];
 
   const adminItems = [
+    { label: 'Machine Fleet & Targets', path: '/machines', icon: Cpu, roles: ['ROLE_ADMIN', 'ROLE_DEPT_EXEC', 'ROLE_CAMP_EXEC'] },
+    { label: 'Bit Management', path: '/bits', icon: Disc, roles: ['ROLE_ADMIN', 'ROLE_DEPT_EXEC', 'ROLE_CAMP_EXEC'] },
     { label: 'Target Management', path: '/targets', icon: Target, roles: ['ROLE_ADMIN', 'ROLE_DEPT_EXEC', 'ROLE_CAMP_EXEC'] },
     { label: 'Camp Management', path: '/camps', icon: Building2, roles: ['ROLE_ADMIN', 'ROLE_DEPT_EXEC'] },
     { label: 'User Management', path: '/users', icon: Users, roles: ['ROLE_ADMIN'] },
