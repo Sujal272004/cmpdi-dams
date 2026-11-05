@@ -24,9 +24,10 @@ public class ExportController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) throws Exception {
         byte[] bytes = exportService.generateExcelReport(campId, status, fromDate, toDate);
+        String filename = "CMPDI_Drilling_Report" + (fromDate != null ? "_" + fromDate : "") + (toDate != null ? "_to_" + toDate : "") + ".xlsx";
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=CMPDI_Drilling_Report.xlsx")
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .body(bytes);
     }
 
@@ -39,7 +40,7 @@ public class ExportController {
         String filename = "CMPDI_Sundaywise_Drilling_Report_" + (month != null ? month : "ALL") + ".xlsx";
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .body(bytes);
     }
 

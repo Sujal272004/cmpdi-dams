@@ -38,16 +38,16 @@ export const DailyReportEntry = () => {
     machineNumber: user?.campId === 3 ? 'KME-1000-06' : 'DM-1000-13',
     shift: 'General Shift',
     plannedDepth: '',
-    openingDepth: '148.00',
-    closingDepth: '162.50',
-    cumulativeDepth: '162.50',
+    openingDepth: '0.00',
+    closingDepth: '0.00',
+    cumulativeDepth: '0.00',
     drillingStartTime: '06:00',
     drillingEndTime: '18:00',
     // Mandatory Borehole & Remarks details
     blockName: 'Block A',
-    boreholeId: 'BH-AND-04',
+    boreholeId: 'BH-AND-01',
     bitNo: 'BIT-NX-98472',
-    boreholeDepth: '162.50',
+    boreholeDepth: '350.00',
     boreholeStartDate: new Date().toISOString().split('T')[0],
     workingHours: '12.00',
     preventiveHours: '0.00',
@@ -59,6 +59,63 @@ export const DailyReportEntry = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [previousReportInfo, setPreviousReportInfo] = useState(null);
+  const [loadingPrevious, setLoadingPrevious] = useState(false);
+
+  // Sync opening depth from the previous day's / shift's closing depth
+  const syncOpeningDepth = async (machineNum, bhId, repDate) => {
+    if (!machineNum) return;
+    setLoadingPrevious(true);
+    try {
+      const prev = await apiService.getLatestPreviousReport({
+        machineNumber: machineNum,
+        boreholeId: bhId,
+        beforeDate: repDate
+      });
+
+      if (prev && prev.closingDepth !== undefined && prev.closingDepth !== null) {
+        const lastClosing = parseFloat(prev.closingDepth) || 0;
+        const formattedClosing = lastClosing.toFixed(2);
+        setPreviousReportInfo({
+          found: true,
+          reportDate: prev.reportDate,
+          closingDepth: formattedClosing,
+          boreholeId: prev.boreholeId || prev.drillHole,
+          shift: prev.shift
+        });
+
+        setFormData(curr => {
+          const nextClosing = (parseFloat(curr.closingDepth) <= lastClosing || curr.closingDepth === '0.00' || !curr.closingDepth)
+            ? formattedClosing
+            : curr.closingDepth;
+
+          return {
+            ...curr,
+            openingDepth: formattedClosing,
+            closingDepth: nextClosing,
+            cumulativeDepth: nextClosing,
+            blockName: prev.blockName || curr.blockName,
+            boreholeId: prev.boreholeId || prev.drillHole || curr.boreholeId,
+            boreholeStartDate: prev.boreholeStartDate || curr.boreholeStartDate,
+            boreholeDepth: prev.boreholeDepth ? String(prev.boreholeDepth) : curr.boreholeDepth,
+            bitNo: prev.bitNo || curr.bitNo,
+          };
+        });
+      } else {
+        setPreviousReportInfo({ found: false });
+        setFormData(curr => ({
+          ...curr,
+          openingDepth: '0.00',
+          closingDepth: (curr.closingDepth === '0.00' || !curr.closingDepth) ? '0.00' : curr.closingDepth,
+          cumulativeDepth: (curr.cumulativeDepth === '0.00' || !curr.cumulativeDepth) ? '0.00' : curr.cumulativeDepth,
+        }));
+      }
+    } catch (err) {
+      console.warn("Could not fetch previous report for auto opening depth:", err);
+    } finally {
+      setLoadingPrevious(false);
+    }
+  };
 
   // Determine current month name based on reportDate or today
   const dateObj = formData.reportDate ? new Date(formData.reportDate + 'T00:00:00') : new Date();
@@ -102,6 +159,9 @@ export const DailyReportEntry = () => {
           bitNo: assignedBit ? assignedBit.bitNumber : 'BIT-NX-98472',
           plannedDepth: target !== null && target !== undefined ? String(target) : '350.00'
         }));
+
+        // Fetch yesterday's / last shift's closing depth to auto-fill opening depth
+        syncOpeningDepth(initialMachine, null, formData.reportDate);
       } catch (err) {
         console.error("Error loading master data in DailyReportEntry:", err);
       } finally {
@@ -137,6 +197,7 @@ export const DailyReportEntry = () => {
         bitNo: assignedBit ? assignedBit.bitNumber : prev.bitNo,
         plannedDepth: target !== null && target !== undefined ? String(target) : prev.plannedDepth
       }));
+      syncOpeningDepth(nextMachine, null, formData.reportDate);
       setError(null);
       return;
     }
@@ -150,6 +211,7 @@ export const DailyReportEntry = () => {
         bitNo: assignedBit ? assignedBit.bitNumber : prev.bitNo,
         plannedDepth: target !== null && target !== undefined ? String(target) : prev.plannedDepth
       }));
+      syncOpeningDepth(value, null, formData.reportDate);
       setError(null);
       return;
     }
@@ -162,6 +224,17 @@ export const DailyReportEntry = () => {
         ...prev,
         reportDate: value,
         plannedDepth: target !== null && target !== undefined ? String(target) : prev.plannedDepth
+      }));
+      syncOpeningDepth(formData.machineNumber, formData.boreholeId, value);
+      setError(null);
+      return;
+    }
+
+    if (name === 'closingDepth') {
+      setFormData(prev => ({
+        ...prev,
+        closingDepth: value,
+        cumulativeDepth: value
       }));
       setError(null);
       return;
@@ -384,7 +457,14 @@ export const DailyReportEntry = () => {
             </div>
 
             <div>
-              <label className={labelClass}>Opening Depth (m)<Star /></label>
+              <div className="flex items-center justify-between mb-1">
+                <label className={labelClass}>Opening Depth (m)<Star /></label>
+                {previousReportInfo?.found && (
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-0.5" title={`Carried from previous report on ${previousReportInfo.reportDate}`}>
+                    <CheckCircle2 className="w-3 h-3 shrink-0" /> Prev: {previousReportInfo.closingDepth}m
+                  </span>
+                )}
+              </div>
               <input
                 type="number"
                 step="0.01"
@@ -394,6 +474,15 @@ export const DailyReportEntry = () => {
                 required
                 className={inputClass}
               />
+              {previousReportInfo?.found ? (
+                <p className="text-[10px] text-emerald-700 dark:text-emerald-400 mt-1">
+                  ✓ Auto-started from yesterday's closing depth ({previousReportInfo.closingDepth} m)
+                </p>
+              ) : (
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Initial depth for this borehole / rig
+                </p>
+              )}
             </div>
 
             <div>
@@ -447,6 +536,7 @@ export const DailyReportEntry = () => {
                 name="boreholeId"
                 value={formData.boreholeId}
                 onChange={handleChange}
+                onBlur={() => syncOpeningDepth(formData.machineNumber, formData.boreholeId, formData.reportDate)}
                 required
                 placeholder="e.g. BH-AND-01"
                 className={inputClass}

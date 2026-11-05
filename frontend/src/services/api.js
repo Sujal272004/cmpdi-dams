@@ -251,6 +251,27 @@ export const apiService = {
     }
   },
 
+  getLatestPreviousReport: async ({ machineNumber, boreholeId, beforeDate }) => {
+    try {
+      const response = await apiClient.get('/reports/latest-previous', {
+        params: {
+          machineNumber: machineNumber || undefined,
+          boreholeId: boreholeId || undefined,
+          beforeDate: beforeDate || undefined
+        }
+      });
+      return response.data.data;
+    } catch {
+      const reports = getPersistentReports();
+      return reports.find(r => {
+        if (!machineNumber || r.machineNumber?.trim().toLowerCase() !== machineNumber.trim().toLowerCase()) return false;
+        if (boreholeId && r.boreholeId && r.boreholeId.trim().toLowerCase() !== boreholeId.trim().toLowerCase()) return false;
+        if (beforeDate && r.reportDate && r.reportDate > beforeDate) return false;
+        return true;
+      }) || null;
+    }
+  },
+
   getReportById: async (id) => {
     try {
       const response = await apiClient.get(`/reports/${id}`);

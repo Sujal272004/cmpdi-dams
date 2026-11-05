@@ -5,11 +5,13 @@ import in.gov.cmpdi.dams.dto.DailyReportDTO;
 import in.gov.cmpdi.dams.service.DailyReportService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -25,6 +27,15 @@ public class DailyReportController {
             @RequestParam(required = false) String status) {
         List<DailyReportDTO> reports = dailyReportService.getAllReports(campId, status);
         return ResponseEntity.ok(ApiResponse.ok("Reports retrieved successfully", reports));
+    }
+
+    @GetMapping("/latest-previous")
+    public ResponseEntity<ApiResponse<DailyReportDTO>> getLatestPreviousReport(
+            @RequestParam String machineNumber,
+            @RequestParam(required = false) String boreholeId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate beforeDate) {
+        DailyReportDTO report = dailyReportService.getLatestPreviousReport(machineNumber, boreholeId, beforeDate);
+        return ResponseEntity.ok(ApiResponse.ok("Latest previous report retrieved", report));
     }
 
     @GetMapping("/{id}")

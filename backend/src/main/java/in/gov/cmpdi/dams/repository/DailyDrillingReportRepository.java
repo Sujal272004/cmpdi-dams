@@ -18,6 +18,10 @@ public interface DailyDrillingReportRepository extends JpaRepository<DailyDrilli
     
     List<DailyDrillingReport> findByCampIdAndIsDeletedFalseOrderByReportDateDescReportIdDesc(Long campId);
 
+    List<DailyDrillingReport> findByMachineNumberAndIsDeletedFalseOrderByReportDateDescReportIdDesc(String machineNumber);
+
+    List<DailyDrillingReport> findByMachineNumberAndBoreholeIdAndIsDeletedFalseOrderByReportDateDescReportIdDesc(String machineNumber, String boreholeId);
+
     List<DailyDrillingReport> findByReportStatusAndIsDeletedFalseOrderByReportDateDesc(String reportStatus);
 
     boolean existsByCampIdAndMachineNumberAndDrillHoleAndShiftAndReportDateAndIsDeletedFalse(

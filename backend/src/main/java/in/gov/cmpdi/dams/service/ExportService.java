@@ -1,10 +1,19 @@
 package in.gov.cmpdi.dams.service;
 
-import com.lowagie.text.*;
+import com.lowagie.text.Document;
+import com.lowagie.text.DocumentException;
+import com.lowagie.text.Element;
 import com.lowagie.text.Font;
-import com.lowagie.text.pdf.*;
+import com.lowagie.text.FontFactory;
+import com.lowagie.text.PageSize;
+import com.lowagie.text.Paragraph;
+import com.lowagie.text.Phrase;
+import com.lowagie.text.pdf.PdfPCell;
+import com.lowagie.text.pdf.PdfPTable;
+import com.lowagie.text.pdf.PdfWriter;
 import in.gov.cmpdi.dams.dto.DailyReportDTO;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
@@ -12,71 +21,328 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ExportService {
 
     private final DailyReportService dailyReportService;
 
-    public byte[] generateExcelReport(Long campId, String status, java.time.LocalDate fromDate, java.time.LocalDate toDate) throws IOException {
+    // -------------------------------------------------------------------------
+    // DPR Format columns (matches DPR Format.xlsx exactly – 15 columns):
+    //  A: Camp Name               B: RIG No.               C: Shift
+    //  D: Total Day Progress      E: Monthly Cummulative Meterage  F: Yearly Cummulative Meterage
+    //  G: Borehole ID             H: Borehole Start dt      I: Block Name
+    //  J: Remarks                 K: Preventive Hrs         L: Working Hrs
+    //  M: Diesel in Pump(Ltrs)   N: Diesel in Rig(Ltrs)    O: Bit No
+    // -------------------------------------------------------------------------
+
+    private static final String[] DPR_COLUMNS = {
+        "Camp Name",
+        "RIG No.",
+        "Shift",
+        "Total Day Progress",
+        "Monthly Cummulative Meterage",
+        "Yearly Cummulative Meterage",
+        "Borehole ID",
+        "Borehole Start dt",
+        "Block Name",
+        "Remarks",
+        "Preventive Hrs",
+        "Working Hrs",
+        "Diesel in Pump(Ltrs)",
+        "Diesel in Rig(Ltrs)",
+        "Bit No"
+    };
+
+    /** Column widths (character units) mirroring DPR Format.xlsx */
+    private static final int[] DPR_COL_WIDTHS = {
+        15, 15, 11, 12, 12, 14, 12, 16, 11, 25, 10, 10, 13, 11, 10
+    };
+
+    // =========================================================================
+    //  Template Loading / Fallback Helpers
+    // =========================================================================
+
+    private Workbook loadTemplateWorkbook() {
+        // 1. Try classpath resource
+        try {
+            InputStream is = getClass().getResourceAsStream("/templates/DPR_Format.xlsx");
+            if (is == null) {
+                is = getClass().getResourceAsStream("/templates/DPR Format.xlsx");
+            }
+            if (is != null) {
+                log.info("Loaded DPR Format workbook from classpath template");
+                return new XSSFWorkbook(is);
+            }
+        } catch (Exception e) {
+            log.warn("Could not load template from classpath: {}", e.getMessage());
+        }
+
+        // 2. Try file system locations
+        String[] candidatePaths = {
+            "C:/Users/Appr Sujal/Downloads/cmpdi-dams-main/DPR Format.xlsx",
+            "../DPR Format.xlsx",
+            "../../DPR Format.xlsx",
+            "DPR Format.xlsx",
+            "cmpdi-dams-main/backend/src/main/resources/templates/DPR_Format.xlsx"
+        };
+        for (String path : candidatePaths) {
+            File file = new File(path);
+            if (file.exists() && file.isFile()) {
+                try (FileInputStream fis = new FileInputStream(file)) {
+                    log.info("Loaded DPR Format workbook from file: {}", path);
+                    return new XSSFWorkbook(fis);
+                } catch (Exception e) {
+                    log.warn("Failed reading template from file {}: {}", path, e.getMessage());
+                }
+            }
+        }
+
+        // 3. Fallback: create fresh workbook strictly matching DPR Format structure
+        log.info("Creating DPR Format workbook programmatically");
+        return createFallbackWorkbook();
+    }
+
+    private Workbook createFallbackWorkbook() {
+        Workbook wb = new XSSFWorkbook();
+        Sheet sheet = wb.createSheet("Sheet1");
+
+        CellStyle headerStyle = createDprHeaderStyle(wb);
+        Row headerRow = sheet.createRow(0);
+        headerRow.setHeightInPoints(33.75f);
+
+        for (int i = 0; i < DPR_COLUMNS.length; i++) {
+            Cell cell = headerRow.createCell(i);
+            cell.setCellValue(DPR_COLUMNS[i]);
+            cell.setCellStyle(headerStyle);
+            sheet.setColumnWidth(i, DPR_COL_WIDTHS[i] * 256);
+        }
+        return wb;
+    }
+
+    /** Bold Arial-8 header cell style matching DPR Format.xlsx */
+    private CellStyle createDprHeaderStyle(Workbook wb) {
+        org.apache.poi.ss.usermodel.Font font = wb.createFont();
+        font.setFontName("Arial");
+        font.setFontHeightInPoints((short) 8);
+        font.setBold(true);
+
+        CellStyle style = wb.createCellStyle();
+        style.setFont(font);
+        style.setAlignment(HorizontalAlignment.CENTER);
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
+        style.setWrapText(true);
+        applyThinBorders(style);
+        return style;
+    }
+
+    /** Data cell style (Arial-8, centered, thin border) */
+    private CellStyle createDprDataStyle(Workbook wb) {
+        org.apache.poi.ss.usermodel.Font font = wb.createFont();
+        font.setFontName("Arial");
+        font.setFontHeightInPoints((short) 8);
+
+        CellStyle style = wb.createCellStyle();
+        style.setFont(font);
+        style.setAlignment(HorizontalAlignment.CENTER);
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
+        applyThinBorders(style);
+        return style;
+    }
+
+    private void applyThinBorders(CellStyle style) {
+        style.setBorderLeft(BorderStyle.THIN);
+        style.setBorderRight(BorderStyle.THIN);
+        style.setBorderTop(BorderStyle.THIN);
+        style.setBorderBottom(BorderStyle.THIN);
+    }
+
+    private CellStyle getStyle(CellStyle[] styles, int col, CellStyle defaultStyle) {
+        if (styles != null && col < styles.length && styles[col] != null) {
+            return styles[col];
+        }
+        return defaultStyle;
+    }
+
+    /** Fills one DPR data row from a DailyReportDTO matching the 15 columns */
+    private void writeDprDataRow(Row row, DailyReportDTO r, CellStyle[] styles, CellStyle defaultStyle,
+                                  double monthlyCumulative, double yearlyCumulative) {
+        row.setHeightInPoints(18f);
+
+        // A (0) – Camp Name
+        createStringCell(row, 0, r.getCampName(), getStyle(styles, 0, defaultStyle));
+        // B (1) – RIG No.
+        createStringCell(row, 1, r.getMachineNumber(), getStyle(styles, 1, defaultStyle));
+        // C (2) – Shift
+        createStringCell(row, 2, r.getShift(), getStyle(styles, 2, defaultStyle));
+        // D (3) – Total Day Progress
+        createNumericCell(row, 3, r.getDailyProgress() != null ? r.getDailyProgress().doubleValue() : 0.0, getStyle(styles, 3, defaultStyle));
+        // E (4) – Monthly Cummulative Meterage
+        createNumericCell(row, 4, monthlyCumulative, getStyle(styles, 4, defaultStyle));
+        // F (5) – Yearly Cummulative Meterage
+        createNumericCell(row, 5, yearlyCumulative, getStyle(styles, 5, defaultStyle));
+        // G (6) – Borehole ID
+        String bhId = (r.getBoreholeId() != null && !r.getBoreholeId().isBlank())
+                ? r.getBoreholeId() : (r.getDrillHole() != null ? r.getDrillHole() : "");
+        createStringCell(row, 6, bhId, getStyle(styles, 6, defaultStyle));
+        // H (7) – Borehole Start dt
+        String startDt = r.getBoreholeStartDate() != null
+                ? r.getBoreholeStartDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")) : "";
+        createStringCell(row, 7, startDt, getStyle(styles, 7, defaultStyle));
+        // I (8) – Block Name
+        createStringCell(row, 8, r.getBlockName(), getStyle(styles, 8, defaultStyle));
+        // J (9) – Remarks
+        createStringCell(row, 9, r.getRemarks(), getStyle(styles, 9, defaultStyle));
+        // K (10) – Preventive Hrs
+        createNumericCell(row, 10, r.getPreventiveHours() != null ? r.getPreventiveHours().doubleValue() : 0.0, getStyle(styles, 10, defaultStyle));
+        // L (11) – Working Hrs
+        createNumericCell(row, 11, r.getWorkingHours() != null ? r.getWorkingHours().doubleValue() : 0.0, getStyle(styles, 11, defaultStyle));
+        // M (12) – Diesel in Pump(Ltrs)
+        createNumericCell(row, 12, r.getDieselPump() != null ? r.getDieselPump().doubleValue() : 0.0, getStyle(styles, 12, defaultStyle));
+        // N (13) – Diesel in Rig(Ltrs)
+        createNumericCell(row, 13, r.getDieselRig() != null ? r.getDieselRig().doubleValue() : 0.0, getStyle(styles, 13, defaultStyle));
+        // O (14) – Bit No
+        createStringCell(row, 14, r.getBitNo(), getStyle(styles, 14, defaultStyle));
+    }
+
+    private void createStringCell(Row row, int col, String value, CellStyle style) {
+        Cell cell = row.createCell(col);
+        cell.setCellValue(value != null ? value : "");
+        if (style != null) cell.setCellStyle(style);
+    }
+
+    private void createNumericCell(Row row, int col, double value, CellStyle style) {
+        Cell cell = row.createCell(col);
+        cell.setCellValue(value);
+        if (style != null) cell.setCellStyle(style);
+    }
+
+    // =========================================================================
+    //  Cumulative Progress Calculator
+    // =========================================================================
+
+    private Map<Long, Double[]> computeCumulativeProgress(List<DailyReportDTO> reports, Long campId, String status, LocalDate fromDate) {
+        Map<Long, Double[]> resultMap = new HashMap<>();
+        Map<String, Double> machineMonthlyProgress = new HashMap<>();
+        Map<String, Double> machineYearlyProgress = new HashMap<>();
+
+        // If fromDate is specified, fetch prior reports in the current year to initialize cumulative bases
+        if (fromDate != null) {
+            LocalDate yearStart = fromDate.withDayOfYear(1);
+            if (yearStart.isBefore(fromDate)) {
+                try {
+                    List<DailyReportDTO> priorReports = dailyReportService.getAllReports(campId, status, yearStart, fromDate.minusDays(1));
+                    priorReports.sort(Comparator.comparing(DailyReportDTO::getReportDate, Comparator.nullsLast(Comparator.naturalOrder()))
+                            .thenComparing(DailyReportDTO::getReportId, Comparator.nullsLast(Comparator.naturalOrder())));
+
+                    for (DailyReportDTO r : priorReports) {
+                        if (r.getReportDate() == null) continue;
+                        String machine = r.getMachineNumber() != null ? r.getMachineNumber() : "ALL";
+                        double prog = r.getDailyProgress() != null ? r.getDailyProgress().doubleValue() : 0.0;
+                        String yKey = machine + "_" + r.getReportDate().getYear();
+                        machineYearlyProgress.put(yKey, machineYearlyProgress.getOrDefault(yKey, 0.0) + prog);
+
+                        if (r.getReportDate().getMonth() == fromDate.getMonth()) {
+                            String mKey = machine + "_" + YearMonth.from(r.getReportDate());
+                            machineMonthlyProgress.put(mKey, machineMonthlyProgress.getOrDefault(mKey, 0.0) + prog);
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("Error calculating prior cumulative meterage: {}", e.getMessage());
+                }
+            }
+        }
+
+        // Process the exported reports in chronological order
+        for (DailyReportDTO r : reports) {
+            String machine = r.getMachineNumber() != null ? r.getMachineNumber() : "ALL";
+            LocalDate date = r.getReportDate() != null ? r.getReportDate() : LocalDate.now();
+            String mKey = machine + "_" + YearMonth.from(date);
+            String yKey = machine + "_" + date.getYear();
+
+            double prog = r.getDailyProgress() != null ? r.getDailyProgress().doubleValue() : 0.0;
+            double mCum = machineMonthlyProgress.getOrDefault(mKey, 0.0) + prog;
+            machineMonthlyProgress.put(mKey, mCum);
+
+            double yCum = machineYearlyProgress.getOrDefault(yKey, 0.0) + prog;
+            machineYearlyProgress.put(yKey, yCum);
+
+            if (r.getReportId() != null) {
+                resultMap.put(r.getReportId(), new Double[]{mCum, yCum});
+            }
+        }
+
+        return resultMap;
+    }
+
+    // =========================================================================
+    //  PUBLIC: Daily Excel Report  (Strict DPR Format.xlsx)
+    // =========================================================================
+
+    public byte[] generateExcelReport(Long campId, String status,
+                                       LocalDate fromDate,
+                                       LocalDate toDate) throws IOException {
+
         List<DailyReportDTO> reports = dailyReportService.getAllReports(campId, status, fromDate, toDate);
 
-        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            Sheet sheet = workbook.createSheet("Daily Drilling Progress");
+        // Sort chronologically (earliest to latest) for accurate progress tracking
+        reports.sort(Comparator.comparing(DailyReportDTO::getReportDate, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(DailyReportDTO::getReportId, Comparator.nullsLast(Comparator.naturalOrder())));
 
-            // Header Font
-            org.apache.poi.ss.usermodel.Font headerFont = workbook.createFont();
-            headerFont.setBold(true);
-            headerFont.setColor(IndexedColors.WHITE.getIndex());
+        Map<Long, Double[]> cumulativeMap = computeCumulativeProgress(reports, campId, status, fromDate);
 
-            CellStyle headerStyle = workbook.createCellStyle();
-            headerStyle.setFont(headerFont);
-            headerStyle.setFillForegroundColor(IndexedColors.DARK_BLUE.getIndex());
-            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-            headerStyle.setAlignment(HorizontalAlignment.CENTER);
+        try (Workbook workbook = loadTemplateWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.getNumberOfSheets() > 0 ? workbook.getSheetAt(0) : workbook.createSheet("Sheet1");
 
-            String[] columns = {
-                "Report ID", "Date", "Camp", "Machine No.", "Drill Hole", "Bit No.", "Shift",
-                "Opening Depth (m)", "Closing Depth (m)", "Daily Progress (m)",
-                "Formation", "Core Recovery (%)", "Water Level (m)", "Status", "Created By", "Approved By"
-            };
+            // Extract styles from template row (index 1) if available
+            CellStyle[] templateStyles = new CellStyle[DPR_COLUMNS.length];
+            Row templateRow = sheet.getRow(1);
+            if (templateRow != null) {
+                for (int c = 0; c < DPR_COLUMNS.length; c++) {
+                    Cell cell = templateRow.getCell(c);
+                    if (cell != null) {
+                        templateStyles[c] = cell.getCellStyle();
+                    }
+                }
+            }
+            CellStyle defaultDataStyle = createDprDataStyle(workbook);
 
-            Row headerRow = sheet.createRow(0);
-            for (int i = 0; i < columns.length; i++) {
-                Cell cell = headerRow.createCell(i);
-                cell.setCellValue(columns[i]);
-                cell.setCellStyle(headerStyle);
+            // Populate rows starting at index 1 (directly below Row 0 headers)
+            for (int i = 0; i < reports.size(); i++) {
+                int targetRowIdx = i + 1;
+                Row row = sheet.getRow(targetRowIdx);
+                if (row == null) {
+                    row = sheet.createRow(targetRowIdx);
+                }
+                DailyReportDTO r = reports.get(i);
+                Double[] cum = (r.getReportId() != null) ? cumulativeMap.get(r.getReportId()) : null;
+                double mCum = cum != null ? cum[0] : (r.getDailyProgress() != null ? r.getDailyProgress().doubleValue() : 0.0);
+                double yCum = cum != null ? cum[1] : (r.getDailyProgress() != null ? r.getDailyProgress().doubleValue() : 0.0);
+
+                writeDprDataRow(row, r, templateStyles, defaultDataStyle, mCum, yCum);
             }
 
-            int rowIdx = 1;
-            for (DailyReportDTO r : reports) {
-                Row row = sheet.createRow(rowIdx++);
-                row.createCell(0).setCellValue(r.getReportId() != null ? r.getReportId() : 0);
-                row.createCell(1).setCellValue(r.getReportDate() != null ? r.getReportDate().toString() : "");
-                row.createCell(2).setCellValue(r.getCampName() != null ? r.getCampName() : "");
-                row.createCell(3).setCellValue(r.getMachineNumber() != null ? r.getMachineNumber() : "");
-                row.createCell(4).setCellValue(r.getDrillHole() != null ? r.getDrillHole() : "");
-                row.createCell(5).setCellValue(r.getBitNo() != null ? r.getBitNo() : "");
-                row.createCell(6).setCellValue(r.getShift() != null ? r.getShift() : "");
-                row.createCell(7).setCellValue(r.getOpeningDepth() != null ? r.getOpeningDepth().doubleValue() : 0.0);
-                row.createCell(8).setCellValue(r.getClosingDepth() != null ? r.getClosingDepth().doubleValue() : 0.0);
-                row.createCell(9).setCellValue(r.getDailyProgress() != null ? r.getDailyProgress().doubleValue() : 0.0);
-                row.createCell(10).setCellValue(r.getFormation() != null ? r.getFormation() : "");
-                row.createCell(11).setCellValue(r.getCoreRecovery() != null ? r.getCoreRecovery().doubleValue() : 0.0);
-                row.createCell(12).setCellValue(r.getWaterLevel() != null ? r.getWaterLevel().doubleValue() : 0.0);
-                row.createCell(13).setCellValue(r.getReportStatus() != null ? r.getReportStatus() : "");
-                row.createCell(14).setCellValue(r.getCreatedBy() != null ? r.getCreatedBy() : "");
-                row.createCell(15).setCellValue(r.getApprovedBy() != null ? r.getApprovedBy() : "N/A");
-            }
-
-
-            for (int i = 0; i < columns.length; i++) {
-                sheet.autoSizeColumn(i);
+            // If template had extra rows beyond reports size, remove unused rows
+            int lastRowNum = sheet.getLastRowNum();
+            for (int r = reports.size() + 1; r <= lastRowNum; r++) {
+                Row rowToRemove = sheet.getRow(r);
+                if (rowToRemove != null) {
+                    sheet.removeRow(rowToRemove);
+                }
             }
 
             workbook.write(out);
@@ -88,104 +354,61 @@ public class ExportService {
         return generateExcelReport(campId, status, null, null);
     }
 
+    // =========================================================================
+    //  PUBLIC: Sundaywise Excel Report  (Strict DPR Format.xlsx)
+    // =========================================================================
+
     public byte[] generateSundaywiseExcelReport(Long campId, String status, String monthStr) throws IOException {
-        java.time.LocalDate fromDate;
-        java.time.LocalDate toDate;
-        if (monthStr != null && !monthStr.isBlank()) {
-            java.time.YearMonth ym = java.time.YearMonth.parse(monthStr);
-            fromDate = ym.atDay(1);
-            toDate = ym.atEndOfMonth();
-        } else {
-            java.time.YearMonth ym = java.time.YearMonth.now();
-            fromDate = ym.atDay(1);
-            toDate = ym.atEndOfMonth();
-        }
+        YearMonth ym = (monthStr != null && !monthStr.isBlank())
+                ? YearMonth.parse(monthStr) : YearMonth.now();
+        LocalDate fromDate = ym.atDay(1);
+        LocalDate toDate   = ym.atEndOfMonth();
 
         List<DailyReportDTO> allReports = dailyReportService.getAllReports(campId, status, fromDate, toDate);
         List<DailyReportDTO> sundayReports = allReports.stream()
-                .filter(r -> r.getReportDate() != null && r.getReportDate().getDayOfWeek() == java.time.DayOfWeek.SUNDAY)
+                .filter(r -> r.getReportDate() != null
+                        && r.getReportDate().getDayOfWeek() == java.time.DayOfWeek.SUNDAY)
+                .sorted(Comparator.comparing(DailyReportDTO::getReportDate, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(DailyReportDTO::getReportId, Comparator.nullsLast(Comparator.naturalOrder())))
                 .toList();
 
-        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            Sheet sheet = workbook.createSheet("Sundaywise Drilling Report");
+        Map<Long, Double[]> cumulativeMap = computeCumulativeProgress(sundayReports, campId, status, fromDate);
 
-            // Title Row
-            org.apache.poi.ss.usermodel.Font titleFont = workbook.createFont();
-            titleFont.setBold(true);
-            titleFont.setFontHeightInPoints((short) 14);
-            CellStyle titleStyle = workbook.createCellStyle();
-            titleStyle.setFont(titleFont);
+        try (Workbook workbook = loadTemplateWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.getNumberOfSheets() > 0 ? workbook.getSheetAt(0) : workbook.createSheet("Sheet1");
 
-            Row titleRow = sheet.createRow(0);
-            Cell titleCell = titleRow.createCell(0);
-            titleCell.setCellValue("CMPDI - SUNDAYWISE DRILLING PROGRESS REPORT (" + (monthStr != null ? monthStr : "ALL") + ")");
-            titleCell.setCellStyle(titleStyle);
+            CellStyle[] templateStyles = new CellStyle[DPR_COLUMNS.length];
+            Row templateRow = sheet.getRow(1);
+            if (templateRow != null) {
+                for (int c = 0; c < DPR_COLUMNS.length; c++) {
+                    Cell cell = templateRow.getCell(c);
+                    if (cell != null) {
+                        templateStyles[c] = cell.getCellStyle();
+                    }
+                }
+            }
+            CellStyle defaultDataStyle = createDprDataStyle(workbook);
 
-            // Header Style
-            org.apache.poi.ss.usermodel.Font headerFont = workbook.createFont();
-            headerFont.setBold(true);
-            headerFont.setColor(IndexedColors.WHITE.getIndex());
+            for (int i = 0; i < sundayReports.size(); i++) {
+                int targetRowIdx = i + 1;
+                Row row = sheet.getRow(targetRowIdx);
+                if (row == null) {
+                    row = sheet.createRow(targetRowIdx);
+                }
+                DailyReportDTO r = sundayReports.get(i);
+                Double[] cum = (r.getReportId() != null) ? cumulativeMap.get(r.getReportId()) : null;
+                double mCum = cum != null ? cum[0] : (r.getDailyProgress() != null ? r.getDailyProgress().doubleValue() : 0.0);
+                double yCum = cum != null ? cum[1] : (r.getDailyProgress() != null ? r.getDailyProgress().doubleValue() : 0.0);
 
-            CellStyle headerStyle = workbook.createCellStyle();
-            headerStyle.setFont(headerFont);
-            headerStyle.setFillForegroundColor(IndexedColors.DARK_BLUE.getIndex());
-            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-            headerStyle.setAlignment(HorizontalAlignment.CENTER);
-
-            String[] columns = {
-                "Report ID", "Sunday Date", "Camp", "Block Name", "Machine No.", "Drill Hole", "Bit No.", "Shift",
-                "Opening Depth (m)", "Closing Depth (m)", "Sunday Progress (m)",
-                "Formation", "Core Recovery (%)", "Status", "Created By"
-            };
-
-            Row headerRow = sheet.createRow(2);
-            for (int i = 0; i < columns.length; i++) {
-                Cell cell = headerRow.createCell(i);
-                cell.setCellValue(columns[i]);
-                cell.setCellStyle(headerStyle);
+                writeDprDataRow(row, r, templateStyles, defaultDataStyle, mCum, yCum);
             }
 
-            int rowIdx = 3;
-            double totalSundayMeters = 0.0;
-            for (DailyReportDTO r : sundayReports) {
-                Row row = sheet.createRow(rowIdx++);
-                double prog = r.getDailyProgress() != null ? r.getDailyProgress().doubleValue() : 0.0;
-                totalSundayMeters += prog;
-
-                row.createCell(0).setCellValue(r.getReportId() != null ? r.getReportId() : 0);
-                row.createCell(1).setCellValue(r.getReportDate() != null ? r.getReportDate().toString() + " (Sun)" : "");
-                row.createCell(2).setCellValue(r.getCampName() != null ? r.getCampName() : "");
-                row.createCell(3).setCellValue(r.getBlockName() != null ? r.getBlockName() : "");
-                row.createCell(4).setCellValue(r.getMachineNumber() != null ? r.getMachineNumber() : "");
-                row.createCell(5).setCellValue(r.getDrillHole() != null ? r.getDrillHole() : "");
-                row.createCell(6).setCellValue(r.getBitNo() != null ? r.getBitNo() : "");
-                row.createCell(7).setCellValue(r.getShift() != null ? r.getShift() : "");
-                row.createCell(8).setCellValue(r.getOpeningDepth() != null ? r.getOpeningDepth().doubleValue() : 0.0);
-                row.createCell(9).setCellValue(r.getClosingDepth() != null ? r.getClosingDepth().doubleValue() : 0.0);
-                row.createCell(10).setCellValue(prog);
-                row.createCell(11).setCellValue(r.getFormation() != null ? r.getFormation() : "");
-                row.createCell(12).setCellValue(r.getCoreRecovery() != null ? r.getCoreRecovery().doubleValue() : 0.0);
-                row.createCell(13).setCellValue(r.getReportStatus() != null ? r.getReportStatus() : "");
-                row.createCell(14).setCellValue(r.getCreatedBy() != null ? r.getCreatedBy() : "");
-            }
-
-            // Summary Row
-            org.apache.poi.ss.usermodel.Font totalFont = workbook.createFont();
-            totalFont.setBold(true);
-            CellStyle totalStyle = workbook.createCellStyle();
-            totalStyle.setFont(totalFont);
-
-            Row totalRow = sheet.createRow(rowIdx + 1);
-            Cell labelCell = totalRow.createCell(0);
-            labelCell.setCellValue("TOTAL SUNDAY DRILLING PROGRESS");
-            labelCell.setCellStyle(totalStyle);
-
-            Cell valCell = totalRow.createCell(10);
-            valCell.setCellValue(totalSundayMeters);
-            valCell.setCellStyle(totalStyle);
-
-            for (int i = 0; i < columns.length; i++) {
-                sheet.autoSizeColumn(i);
+            int lastRowNum = sheet.getLastRowNum();
+            for (int r = sundayReports.size() + 1; r <= lastRowNum; r++) {
+                Row rowToRemove = sheet.getRow(r);
+                if (rowToRemove != null) {
+                    sheet.removeRow(rowToRemove);
+                }
             }
 
             workbook.write(out);
@@ -193,80 +416,119 @@ public class ExportService {
         }
     }
 
+    // =========================================================================
+    //  PUBLIC: PDF Report  (15 DPR columns – landscape A4)
+    // =========================================================================
 
-    public byte[] generatePdfReport(Long campId, String status, java.time.LocalDate fromDate, java.time.LocalDate toDate) throws DocumentException {
+    public byte[] generatePdfReport(Long campId, String status,
+                                     LocalDate fromDate,
+                                     LocalDate toDate) throws DocumentException {
+
         List<DailyReportDTO> reports = dailyReportService.getAllReports(campId, status, fromDate, toDate);
+        reports.sort(Comparator.comparing(DailyReportDTO::getReportDate, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(DailyReportDTO::getReportId, Comparator.nullsLast(Comparator.naturalOrder())));
+
+        Map<Long, Double[]> cumulativeMap = computeCumulativeProgress(reports, campId, status, fromDate);
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        Document document = new Document(PageSize.A4.rotate(), 20, 20, 20, 20);
+        Document document = new Document(PageSize.A4.rotate(), 15, 15, 15, 15);
         PdfWriter.getInstance(document, out);
-
         document.open();
 
-        // Header Title
-        Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, java.awt.Color.BLACK);
-        Paragraph title = new Paragraph("CENTRAL MINE PLANNING & DESIGN INSTITUTE LIMITED (CMPDI)", titleFont);
+        // Title
+        Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 13, java.awt.Color.BLACK);
+        Paragraph title = new Paragraph(
+                "CENTRAL MINE PLANNING & DESIGN INSTITUTE LIMITED (CMPDI)", titleFont);
         title.setAlignment(Element.ALIGN_CENTER);
         document.add(title);
 
-        Font subTitleFont = FontFactory.getFont(FontFactory.HELVETICA, 12, java.awt.Color.DARK_GRAY);
-        Paragraph subtitle = new Paragraph("EXPLORATION DEPARTMENT - DAILY DRILLING PROGRESS REPORT", subTitleFont);
+        Font subTitleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, java.awt.Color.DARK_GRAY);
+        Paragraph subtitle = new Paragraph("DAILY DRILLING PROGRESS REPORT (DPR)", subTitleFont);
         subtitle.setAlignment(Element.ALIGN_CENTER);
-        subtitle.setSpacingAfter(15);
+        subtitle.setSpacingAfter(4);
         document.add(subtitle);
 
-        Font tsFont = FontFactory.getFont(FontFactory.HELVETICA, 9, java.awt.Color.GRAY);
-        Paragraph timestamp = new Paragraph(
-                "Generated On: " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MMM-yyyy HH:mm:ss")),
-                tsFont);
-        timestamp.setAlignment(Element.ALIGN_RIGHT);
-        timestamp.setSpacingAfter(10);
-        document.add(timestamp);
+        String dateRange = (fromDate != null && toDate != null)
+                ? fromDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
+                  + " to " + toDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
+                : "All Dates";
+        Font infoFont = FontFactory.getFont(FontFactory.HELVETICA, 8, java.awt.Color.GRAY);
+        Paragraph info = new Paragraph(
+                "Period: " + dateRange + "     Generated On: "
+                + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MMM-yyyy HH:mm:ss")),
+                infoFont);
+        info.setAlignment(Element.ALIGN_CENTER);
+        info.setSpacingAfter(10);
+        document.add(info);
 
-        // Table
-        PdfPTable table = new PdfPTable(10);
+        // DPR 15 Columns Table
+        PdfPTable table = new PdfPTable(DPR_COLUMNS.length);
         table.setWidthPercentage(100);
-        table.setSpacingBefore(10f);
 
-        Font headFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, java.awt.Color.WHITE);
+        float[] relWidths = { 12f, 11f, 9f, 9f, 10f, 10f, 10f, 11f, 10f, 22f, 8f, 8f, 9f, 9f, 9f };
+        try { table.setWidths(relWidths); } catch (DocumentException ignored) {}
 
-        String[] headers = {"Date", "Camp", "Machine", "Drill Hole", "Shift",
-                "Opening (m)", "Closing (m)", "Progress (m)", "Formation", "Status"};
+        Font headFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 7, java.awt.Color.WHITE);
+        java.awt.Color headerBg = new java.awt.Color(0, 51, 102);
 
-        for (String header : headers) {
+        for (String header : DPR_COLUMNS) {
             PdfPCell cell = new PdfPCell(new Phrase(header, headFont));
-            cell.setBackgroundColor(new java.awt.Color(0, 51, 102));
+            cell.setBackgroundColor(headerBg);
             cell.setHorizontalAlignment(Element.ALIGN_CENTER);
-            cell.setPadding(5);
+            cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+            cell.setPadding(3);
             table.addCell(cell);
         }
 
-        Font dataFont = FontFactory.getFont(FontFactory.HELVETICA, 8, java.awt.Color.BLACK);
+        Font dataFont = FontFactory.getFont(FontFactory.HELVETICA, 6.5f, java.awt.Color.BLACK);
 
         for (DailyReportDTO r : reports) {
-            table.addCell(new Phrase(r.getReportDate() != null ? r.getReportDate().toString() : "", dataFont));
-            table.addCell(new Phrase(r.getCampName() != null ? r.getCampName() : "", dataFont));
-            table.addCell(new Phrase(r.getMachineNumber() != null ? r.getMachineNumber() : "", dataFont));
-            table.addCell(new Phrase(r.getDrillHole() != null ? r.getDrillHole() : "", dataFont));
-            table.addCell(new Phrase(r.getShift() != null ? r.getShift() : "", dataFont));
-            table.addCell(new Phrase(r.getOpeningDepth() != null ? r.getOpeningDepth().toString() : "0", dataFont));
-            table.addCell(new Phrase(r.getClosingDepth() != null ? r.getClosingDepth().toString() : "0", dataFont));
-            table.addCell(new Phrase(r.getDailyProgress() != null ? r.getDailyProgress().toString() : "0", dataFont));
-            table.addCell(new Phrase(r.getFormation() != null ? r.getFormation() : "-", dataFont));
-            table.addCell(new Phrase(r.getReportStatus() != null ? r.getReportStatus() : "", dataFont));
+            Double[] cum = (r.getReportId() != null) ? cumulativeMap.get(r.getReportId()) : null;
+            double mCum = cum != null ? cum[0] : (r.getDailyProgress() != null ? r.getDailyProgress().doubleValue() : 0.0);
+            double yCum = cum != null ? cum[1] : (r.getDailyProgress() != null ? r.getDailyProgress().doubleValue() : 0.0);
+            double progress = r.getDailyProgress() != null ? r.getDailyProgress().doubleValue() : 0.0;
+
+            String startDt = r.getBoreholeStartDate() != null
+                    ? r.getBoreholeStartDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")) : "";
+            String bhId = (r.getBoreholeId() != null && !r.getBoreholeId().isBlank())
+                    ? r.getBoreholeId() : (r.getDrillHole() != null ? r.getDrillHole() : "");
+
+            addPdfCell(table, r.getCampName(), dataFont);
+            addPdfCell(table, r.getMachineNumber(), dataFont);
+            addPdfCell(table, r.getShift(), dataFont);
+            addPdfCell(table, String.format("%.2f", progress), dataFont);
+            addPdfCell(table, String.format("%.2f", mCum), dataFont);
+            addPdfCell(table, String.format("%.2f", yCum), dataFont);
+            addPdfCell(table, bhId, dataFont);
+            addPdfCell(table, startDt, dataFont);
+            addPdfCell(table, r.getBlockName(), dataFont);
+            addPdfCell(table, r.getRemarks(), dataFont);
+            addPdfCell(table, r.getPreventiveHours() != null ? r.getPreventiveHours().toString() : "0.00", dataFont);
+            addPdfCell(table, r.getWorkingHours() != null ? r.getWorkingHours().toString() : "0.00", dataFont);
+            addPdfCell(table, r.getDieselPump() != null ? r.getDieselPump().toString() : "0.00", dataFont);
+            addPdfCell(table, r.getDieselRig() != null ? r.getDieselRig().toString() : "0.00", dataFont);
+            addPdfCell(table, r.getBitNo(), dataFont);
         }
 
         document.add(table);
 
-        // Signature Section
-        Font sigFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, java.awt.Color.DARK_GRAY);
+        // Signature section
+        Font sigFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, java.awt.Color.DARK_GRAY);
         Paragraph sig = new Paragraph(
-                "\n\n\n___________________________                      ___________________________\n" +
-                "   Prepared by (Camp Exec)                             Authorized Signatory (Dept Exec)",
+                "\n\n___________________________                      ___________________________\n"
+                + "   Prepared by (Camp Exec)                             Authorized Signatory (Dept Exec)",
                 sigFont);
         document.add(sig);
 
         document.close();
         return out.toByteArray();
+    }
+
+    private void addPdfCell(PdfPTable table, String value, Font font) {
+        PdfPCell cell = new PdfPCell(new Phrase(value != null ? value : "", font));
+        cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+        cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        cell.setPadding(3);
+        table.addCell(cell);
     }
 }

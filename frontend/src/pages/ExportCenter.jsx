@@ -84,28 +84,45 @@ export const ExportCenter = () => {
     try {
       const allReports = await apiService.getReports(params);
 
+      const dprHeaders = '"Camp Name","RIG No.","Shift","Total Day Progress","Monthly Cummulative Meterage","Yearly Cummulative Meterage","Borehole ID","Borehole Start dt","Block Name","Remarks","Preventive Hrs","Working Hrs","Diesel in Pump(Ltrs)","Diesel in Rig(Ltrs)","Bit No"\n';
+
       if (reportMode === 'sundaywise') {
         const sundayReports = allReports.filter(r => {
           if (selectedMonth && !r.reportDate.startsWith(selectedMonth)) return false;
           return isSunday(r.reportDate);
         });
 
-        let csvContent = '\uFEFF';
-        csvContent += '"CENTRAL MINE PLANNING & DESIGN INSTITUTE LIMITED (CMPDI)"\n';
-        csvContent += '"EXPLORATION DEPARTMENT - SUNDAYWISE DRILLING PROGRESS REPORT"\n';
-        csvContent += `"Month: ${selectedMonth} | Generated On: ${new Date().toLocaleString()} | Camp ID: ${campId || 'All'} | Status: ${status || 'All'}"\n\n`;
-
-        csvContent += '"Report ID","Sunday Date","Camp Name","Block Name","Machine Number","Drill Hole","Bit No.","Shift","Opening Depth (m)","Closing Depth (m)","Sunday Progress (m)","Formation","Core Recovery (%)","Status","Created By"\n';
-
-        let totalSundayProgress = 0;
-        sundayReports.forEach(r => {
-          const prog = parseFloat(r.dailyProgress) || 0;
-          totalSundayProgress += prog;
-
-          csvContent += `"${r.reportId}","${r.reportDate || ''} (Sun)","${r.campName || ''}","${r.blockName || ''}","${r.machineNumber || ''}","${r.drillHole || ''}","${r.bitNo || ''}","${r.shift || ''}","${r.openingDepth || 0}","${r.closingDepth || 0}","${prog}","${r.formation || ''}","${r.coreRecovery || 0}","${r.reportStatus || ''}","${r.createdBy || ''}"\n`;
+        const sortedSundayReports = [...sundayReports].sort((a, b) => {
+          const dateDiff = (a.reportDate || '').localeCompare(b.reportDate || '');
+          if (dateDiff !== 0) return dateDiff;
+          return (a.reportId || 0) - (b.reportId || 0);
         });
 
-        csvContent += `\n"TOTAL SUNDAY DRILLING PROGRESS","","","","","","","","","","Total: ${totalSundayProgress.toFixed(2)} m","","","Count: ${sundayReports.length} Sunday reports",""\n`;
+        let csvContent = '\uFEFF' + dprHeaders;
+
+        const machineMonthly = {};
+        const machineYearly = {};
+
+        sortedSundayReports.forEach(r => {
+          const machine = r.machineNumber || 'RIG';
+          const rDate = r.reportDate || '';
+          const monthKey = `${machine}_${rDate.slice(0, 7)}`;
+          const yearKey = `${machine}_${rDate.slice(0, 4)}`;
+
+          const prog = parseFloat(r.dailyProgress) || 0;
+          machineMonthly[monthKey] = (machineMonthly[monthKey] || 0) + prog;
+          machineYearly[yearKey] = (machineYearly[yearKey] || 0) + prog;
+
+          const monthlyCum = machineMonthly[monthKey].toFixed(2);
+          const yearlyCum = machineYearly[yearKey].toFixed(2);
+          const bhStartDate = r.boreholeStartDate
+            ? r.boreholeStartDate.split('-').reverse().join('-')
+            : '';
+          const boreholeId = r.boreholeId || r.drillHole || '';
+          const remarksClean = (r.remarks || '').replace(/"/g, '""');
+
+          csvContent += `"${r.campName || ''}","${r.machineNumber || ''}","${r.shift || ''}","${prog}","${monthlyCum}","${yearlyCum}","${boreholeId}","${bhStartDate}","${r.blockName || ''}","${remarksClean}","${r.preventiveHours || 0}","${r.workingHours || 0}","${r.dieselPump || 0}","${r.dieselRig || 0}","${r.bitNo || ''}"\n`;
+        });
 
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
@@ -128,27 +145,37 @@ export const ExportCenter = () => {
       const dateSuffix = `${fromDate || 'Start'}_to_${toDate || 'End'}`;
 
       if (type === 'excel') {
-        let csvContent = '\uFEFF';
-        csvContent += '"CENTRAL MINE PLANNING & DESIGN INSTITUTE LIMITED (CMPDI)"\n';
-        csvContent += '"EXPLORATION DEPARTMENT - DRILLING PROGRESS REPORT"\n';
-        csvContent += `"Generated On: ${new Date().toLocaleString()} | Date Range: ${fromDate || 'All'} to ${toDate || 'All'} | Camp ID: ${campId || 'All'} | Status: ${status || 'All'}"\n\n`;
-
-        csvContent += '"Report ID","Report Date","Camp Name","Block Name","Machine Number","Drill Hole","Bit No.","Shift","Planned Depth (m)","Opening Depth (m)","Closing Depth (m)","Daily Progress (m)","Cumulative Depth (m)","Formation","Core Recovery (%)","Water Level (m)","Status","Created By","Approved By"\n';
-
-        let totalProgress = 0;
-        let totalCore = 0;
-
-        filteredReports.forEach(r => {
-          const prog = parseFloat(r.dailyProgress) || 0;
-          const core = parseFloat(r.coreRecovery) || 0;
-          totalProgress += prog;
-          totalCore += core;
-
-          csvContent += `"${r.reportId}","${r.reportDate || ''}","${r.campName || ''}","${r.blockName || ''}","${r.machineNumber || ''}","${r.drillHole || ''}","${r.bitNo || ''}","${r.shift || ''}","${r.plannedDepth || 0}","${r.openingDepth || 0}","${r.closingDepth || 0}","${prog}","${r.cumulativeDepth || 0}","${r.formation || ''}","${core}","${r.waterLevel || 0}","${r.reportStatus || ''}","${r.createdBy || ''}","${r.approvedBy || 'N/A'}"\n`;
+        const sortedReports = [...filteredReports].sort((a, b) => {
+          const dateDiff = (a.reportDate || '').localeCompare(b.reportDate || '');
+          if (dateDiff !== 0) return dateDiff;
+          return (a.reportId || 0) - (b.reportId || 0);
         });
 
-        const avgCore = filteredReports.length > 0 ? (totalCore / filteredReports.length).toFixed(1) : 0;
-        csvContent += `\n"TOTALS / SUMMARY","","","","","","","","","","","Total: ${totalProgress.toFixed(2)} m","","","Avg: ${avgCore}%","","","Count: ${filteredReports.length} reports",""\n`;
+        let csvContent = '\uFEFF' + dprHeaders;
+
+        const machineMonthly = {};
+        const machineYearly = {};
+
+        sortedReports.forEach(r => {
+          const machine = r.machineNumber || 'RIG';
+          const rDate = r.reportDate || '';
+          const monthKey = `${machine}_${rDate.slice(0, 7)}`;
+          const yearKey = `${machine}_${rDate.slice(0, 4)}`;
+
+          const prog = parseFloat(r.dailyProgress) || 0;
+          machineMonthly[monthKey] = (machineMonthly[monthKey] || 0) + prog;
+          machineYearly[yearKey] = (machineYearly[yearKey] || 0) + prog;
+
+          const monthlyCum = machineMonthly[monthKey].toFixed(2);
+          const yearlyCum = machineYearly[yearKey].toFixed(2);
+          const bhStartDate = r.boreholeStartDate
+            ? r.boreholeStartDate.split('-').reverse().join('-')
+            : '';
+          const boreholeId = r.boreholeId || r.drillHole || '';
+          const remarksClean = (r.remarks || '').replace(/"/g, '""');
+
+          csvContent += `"${r.campName || ''}","${r.machineNumber || ''}","${r.shift || ''}","${prog}","${monthlyCum}","${yearlyCum}","${boreholeId}","${bhStartDate}","${r.blockName || ''}","${remarksClean}","${r.preventiveHours || 0}","${r.workingHours || 0}","${r.dieselPump || 0}","${r.dieselRig || 0}","${r.bitNo || ''}"\n`;
+        });
 
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
@@ -162,30 +189,37 @@ export const ExportCenter = () => {
       } else if (type === 'pdf') {
         const printWindow = window.open('', '_blank');
         if (printWindow) {
+          const sortedReports = [...filteredReports].sort((a, b) => {
+            const dateDiff = (a.reportDate || '').localeCompare(b.reportDate || '');
+            if (dateDiff !== 0) return dateDiff;
+            return (a.reportId || 0) - (b.reportId || 0);
+          });
+          const machineMonthly = {};
+          const machineYearly = {};
+
           const html = `
             <!DOCTYPE html>
             <html>
             <head>
-              <title>CMPDI Official Drilling Progress Report</title>
+              <title>CMPDI Official Drilling Progress Report (DPR)</title>
               <style>
-                body { font-family: Arial, sans-serif; margin: 20px; color: #1e293b; font-size: 12px; }
-                .header { text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 10px; margin-bottom: 15px; }
-                .header h1 { margin: 0; font-size: 18px; color: #0b2545; text-transform: uppercase; }
-                .header h2 { margin: 4px 0 0 0; font-size: 13px; color: #475569; }
-                .meta { display: flex; justify-content: space-between; margin-bottom: 15px; background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0; }
-                .meta div { font-size: 11px; }
-                table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-                th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; font-size: 11px; }
-                th { background-color: #0b2545; color: #ffffff; font-weight: bold; text-transform: uppercase; font-size: 10px; }
+                body { font-family: Arial, sans-serif; margin: 15px; color: #1e293b; font-size: 11px; }
+                .header { text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 12px; }
+                .header h1 { margin: 0; font-size: 16px; color: #0b2545; text-transform: uppercase; }
+                .header h2 { margin: 4px 0 0 0; font-size: 12px; color: #475569; }
+                .meta { display: flex; justify-content: space-between; margin-bottom: 12px; background: #f8fafc; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 10px; }
+                table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 9px; }
+                th, td { border: 1px solid #cbd5e1; padding: 4px 5px; text-align: center; }
+                th { background-color: #0b2545; color: #ffffff; font-weight: bold; font-size: 8px; }
                 tr:nth-child(even) { background-color: #f8fafc; }
-                .signature-section { margin-top: 50px; display: flex; justify-content: space-between; page-break-inside: avoid; }
-                .sig-box { width: 220px; text-align: center; border-top: 1px dashed #64748b; padding-top: 6px; font-weight: bold; font-size: 11px; color: #334155; }
+                .signature-section { margin-top: 40px; display: flex; justify-content: space-between; page-break-inside: avoid; }
+                .sig-box { width: 220px; text-align: center; border-top: 1px dashed #64748b; padding-top: 6px; font-weight: bold; font-size: 10px; color: #334155; }
               </style>
             </head>
             <body>
               <div class="header">
-                <h1>Central Mine Planning & Design Institute Limited (CMPDI)</h1>
-                <h2>Exploration Department — Drilling Activity Management System (DAMS)</h2>
+                <h1>Central Mine Planning &amp; Design Institute Limited (CMPDI)</h1>
+                <h2>Exploration Department — Daily Drilling Progress Report (DPR Format)</h2>
               </div>
               <div class="meta">
                 <div>
@@ -194,7 +228,7 @@ export const ExportCenter = () => {
                 </div>
                 <div>
                   <strong>Status Filter:</strong> ${status || 'All Statuses'}<br/>
-                  <strong>Total Records:</strong> ${filteredReports.length}
+                  <strong>Total Records:</strong> ${sortedReports.length}
                 </div>
                 <div>
                   <strong>Generated On:</strong> ${new Date().toLocaleString()}<br/>
@@ -205,33 +239,56 @@ export const ExportCenter = () => {
               <table>
                 <thead>
                   <tr>
-                    <th>Date</th>
-                    <th>Camp</th>
-                    <th>Machine</th>
-                    <th>Drill Hole</th>
-                    <th>Bit No.</th>
+                    <th>Camp Name</th>
+                    <th>RIG No.</th>
                     <th>Shift</th>
-                    <th>Opening (m)</th>
-                    <th>Closing (m)</th>
-                    <th>Progress (m)</th>
-                    <th>Status</th>
+                    <th>Total Day Progress</th>
+                    <th>Monthly Cum.</th>
+                    <th>Yearly Cum.</th>
+                    <th>Borehole ID</th>
+                    <th>Start Date</th>
+                    <th>Block Name</th>
+                    <th>Remarks</th>
+                    <th>Prev. Hrs</th>
+                    <th>Work Hrs</th>
+                    <th>Diesel Pump (L)</th>
+                    <th>Diesel Rig (L)</th>
+                    <th>Bit No</th>
                   </tr>
                 </thead>
                 <tbody>
-                  ${filteredReports.map(r => `
-                    <tr>
-                      <td>${r.reportDate || ''}</td>
-                      <td>${r.campName || ''}</td>
-                      <td>${r.machineNumber || ''}</td>
-                      <td>${r.drillHole || ''}</td>
-                      <td>${r.bitNo || '-'}</td>
-                      <td>${r.shift || ''}</td>
-                      <td>${r.openingDepth || 0}</td>
-                      <td>${r.closingDepth || 0}</td>
-                      <td><strong>${r.dailyProgress || 0}</strong></td>
-                      <td>${r.reportStatus || ''}</td>
-                    </tr>
-                  `).join('')}
+                  ${sortedReports.map(r => {
+                    const machine = r.machineNumber || 'RIG';
+                    const rDate = r.reportDate || '';
+                    const monthKey = `${machine}_${rDate.slice(0, 7)}`;
+                    const yearKey = `${machine}_${rDate.slice(0, 4)}`;
+                    const prog = parseFloat(r.dailyProgress) || 0;
+                    machineMonthly[monthKey] = (machineMonthly[monthKey] || 0) + prog;
+                    machineYearly[yearKey] = (machineYearly[yearKey] || 0) + prog;
+                    const bhStartDate = r.boreholeStartDate
+                      ? r.boreholeStartDate.split('-').reverse().join('-')
+                      : '';
+                    const boreholeId = r.boreholeId || r.drillHole || '';
+                    return `
+                      <tr>
+                        <td>${r.campName || ''}</td>
+                        <td>${r.machineNumber || ''}</td>
+                        <td>${r.shift || ''}</td>
+                        <td><strong>${prog.toFixed(2)}</strong></td>
+                        <td>${machineMonthly[monthKey].toFixed(2)}</td>
+                        <td>${machineYearly[yearKey].toFixed(2)}</td>
+                        <td>${boreholeId}</td>
+                        <td>${bhStartDate}</td>
+                        <td>${r.blockName || ''}</td>
+                        <td style="text-align: left;">${r.remarks || ''}</td>
+                        <td>${r.preventiveHours || 0}</td>
+                        <td>${r.workingHours || 0}</td>
+                        <td>${r.dieselPump || 0}</td>
+                        <td>${r.dieselRig || 0}</td>
+                        <td>${r.bitNo || '-'}</td>
+                      </tr>
+                    `;
+                  }).join('')}
                 </tbody>
               </table>
 
@@ -534,7 +591,7 @@ export const ExportCenter = () => {
               <div>
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white">Sundaywise Monthly Excel Report (.xlsx)</h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Exports only drilling reports recorded on <strong>Sundays</strong> for {selectedMonth}. Formatted with Sunday totals summary row.
+                  Exports drilling reports recorded on <strong>Sundays</strong> for {selectedMonth} formatted strictly as per official 15-column DPR format.
                 </p>
               </div>
             </div>
@@ -557,7 +614,7 @@ export const ExportCenter = () => {
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-slate-900 dark:text-white">Excel Workbook (.xlsx / .csv)</h4>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Includes opening/closing depths, progress totals &amp; Bit No. serials</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Strictly follows official DPR Format: 15 columns with cumulative meterage, borehole start date, block, remarks, preventive hours, diesel &amp; bit number.</p>
                 </div>
               </div>
               <button

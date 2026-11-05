@@ -55,6 +55,29 @@ public class DailyReportService {
         return mapToDTO(report);
     }
 
+    @Transactional(readOnly = true)
+    public DailyReportDTO getLatestPreviousReport(String machineNumber, String boreholeId, java.time.LocalDate beforeDate) {
+        if (machineNumber == null || machineNumber.isBlank()) {
+            return null;
+        }
+
+        List<DailyDrillingReport> reports;
+        if (boreholeId != null && !boreholeId.isBlank()) {
+            reports = reportRepository.findByMachineNumberAndBoreholeIdAndIsDeletedFalseOrderByReportDateDescReportIdDesc(machineNumber.trim(), boreholeId.trim());
+            if (reports.isEmpty()) {
+                reports = reportRepository.findByMachineNumberAndIsDeletedFalseOrderByReportDateDescReportIdDesc(machineNumber.trim());
+            }
+        } else {
+            reports = reportRepository.findByMachineNumberAndIsDeletedFalseOrderByReportDateDescReportIdDesc(machineNumber.trim());
+        }
+
+        return reports.stream()
+                .filter(r -> beforeDate == null || r.getReportDate() == null || !r.getReportDate().isAfter(beforeDate))
+                .findFirst()
+                .map(this::mapToDTO)
+                .orElse(null);
+    }
+
     @Transactional
     public DailyReportDTO createReport(DailyReportDTO dto, String username) {
         Camp camp = campRepository.findByIdAndIsDeletedFalse(dto.getCampId())
