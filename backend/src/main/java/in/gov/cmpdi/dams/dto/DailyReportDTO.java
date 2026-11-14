@@ -70,6 +70,8 @@ public class DailyReportDTO {
 
     private BigDecimal workingHours;
     private BigDecimal preventiveHours;
+    private String drillingType; // Coring, Non-Coring
+    private String breakdownHours; // B/D Hours. Minutes
     private BigDecimal dieselPump;
     private BigDecimal dieselRig;
     private BigDecimal latitude;

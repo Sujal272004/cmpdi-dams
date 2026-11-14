@@ -51,6 +51,8 @@ export const DailyReportEntry = () => {
     boreholeStartDate: new Date().toISOString().split('T')[0],
     workingHours: '12.00',
     preventiveHours: '0.00',
+    drillingType: '',
+    breakdownHours: '',
     dieselPump: '15.00',
     dieselRig: '45.00',
     remarks: 'Normal drilling operation in General Shift. Core recovery satisfactory.',
@@ -99,6 +101,7 @@ export const DailyReportEntry = () => {
             boreholeStartDate: prev.boreholeStartDate || curr.boreholeStartDate,
             boreholeDepth: prev.boreholeDepth ? String(prev.boreholeDepth) : curr.boreholeDepth,
             bitNo: prev.bitNo || curr.bitNo,
+            drillingType: prev.drillingType || curr.drillingType,
           };
         });
       } else {
@@ -300,6 +303,8 @@ export const DailyReportEntry = () => {
         drillingEndTime: formData.drillingEndTime ? formData.drillingEndTime : null,
         workingHours: parseFloat(formData.workingHours) || null,
         preventiveHours: parseFloat(formData.preventiveHours) || 0,
+        drillingType: formData.drillingType ? formData.drillingType.trim() : null,
+        breakdownHours: formData.breakdownHours ? formData.breakdownHours.trim() : null,
         dieselPump: parseFloat(formData.dieselPump) || null,
         dieselRig: parseFloat(formData.dieselRig) || null,
         remarks: formData.remarks.trim(),
@@ -439,7 +444,10 @@ export const DailyReportEntry = () => {
                 className={inputClass}
               >
                 <option value="General Shift">General Shift (06:00 AM - 6:00 PM)</option>
-                <option value="Night Shift">Night Shift (6:00 PM - 06:00 AM)</option>
+                <option value="1st Shift">1st Shift(6:00 AM - 02:00 PM)</option>
+                <option value="2nd Shift">2nd Shift(2:00 PM - 10:00 PM)</option>
+                <option value="General Night Shift">General Night Shift(6:00 PM - 06:00 AM)</option>
+                <option value="Night Shift">Night Shift(10:00 PM - 06:00 AM)</option>
               </select>
             </div>
 
@@ -515,7 +523,7 @@ export const DailyReportEntry = () => {
         {/* Section 3: Borehole & Equipment Details */}
         <div>
           <h3 className={sectionHeadClass}>3. Borehole &amp; Bit Details</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <label className={labelClass}>Block Name<Star /></label>
               <input
@@ -588,6 +596,20 @@ export const DailyReportEntry = () => {
                 className={inputClass}
               />
             </div>
+
+            <div>
+              <label className={labelClass}>Drilling Type</label>
+              <select
+                name="drillingType"
+                value={formData.drillingType}
+                onChange={handleChange}
+                className={inputClass}
+              >
+                <option value="">-- Select Drilling Type --</option>
+                <option value="Coring">Coring</option>
+                <option value="Non-Coring">Non-Coring</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -596,7 +618,7 @@ export const DailyReportEntry = () => {
         <div>
           <h3 className={sectionHeadClass}>4. Operational Parameters &amp; Field Remarks</h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <div>
               <label className={labelClass}>Preventive Hrs (hrs)</label>
               <input
@@ -607,6 +629,18 @@ export const DailyReportEntry = () => {
                 value={formData.preventiveHours}
                 onChange={handleChange}
                 placeholder="e.g. 1.50"
+                className={inputClass}
+              />
+            </div>
+
+            <div>
+              <label className={labelClass}>B/D Hours. Minutes</label>
+              <input
+                type="text"
+                name="breakdownHours"
+                value={formData.breakdownHours}
+                onChange={handleChange}
+                placeholder="e.g. 02.30"
                 className={inputClass}
               />
             </div>

@@ -112,6 +112,8 @@ export const ReportDetails = () => {
       boreholeDepth: parseFloat(editForm?.boreholeDepth) || null,
       workingHours: parseFloat(editForm?.workingHours) || null,
       preventiveHours: parseFloat(editForm?.preventiveHours) || 0,
+      drillingType: editForm?.drillingType || null,
+      breakdownHours: editForm?.breakdownHours || null,
       dieselPump: parseFloat(editForm?.dieselPump) || null,
       dieselRig: parseFloat(editForm?.dieselRig) || null,
       drillHole: editForm?.drillHole || editForm?.boreholeId || editForm?.machineNumber,
@@ -283,22 +285,27 @@ export const ReportDetails = () => {
           {/* Section 3: Borehole Details */}
           <div>
             <h3 className={secHeadCls}>3. Borehole &amp; Bit Details</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 text-xs">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-xs">
               <div><span className="text-slate-500">Block Name:</span><p className="font-bold text-slate-900 dark:text-white mt-0.5">{report.blockName || '—'}</p></div>
               <div><span className="text-slate-500">Borehole ID:</span><p className="font-bold text-slate-900 dark:text-white mt-0.5">{report.boreholeId || '—'}</p></div>
               <div><span className="text-slate-500">Bit No. (Manufacturer S/N):</span><p className="font-bold text-slate-900 dark:text-white mt-0.5">{report.bitNo || '—'}</p></div>
               <div><span className="text-slate-500">Borehole Depth:</span><p className="font-bold text-slate-900 dark:text-white mt-0.5">{report.boreholeDepth ? `${report.boreholeDepth} m` : '—'}</p></div>
               <div><span className="text-slate-500">Borehole Start Date:</span><p className="font-bold text-slate-900 dark:text-white mt-0.5">{report.boreholeStartDate || '—'}</p></div>
+              <div><span className="text-slate-500">Drilling Type:</span><p className="font-bold text-slate-900 dark:text-white mt-0.5">{report.drillingType || '—'}</p></div>
             </div>
           </div>
 
           {/* Section 4: Operational Parameters & Field Remarks */}
           <div>
             <h3 className={secHeadCls}>4. Operational Parameters &amp; Field Remarks</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs mb-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs mb-3">
               <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
                 <span className="text-slate-500 block mb-0.5">Preventive Hrs:</span>
                 <p className="font-bold text-slate-900 dark:text-white">{report.preventiveHours != null ? `${report.preventiveHours} hrs` : '0.00 hrs'}</p>
+              </div>
+              <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                <span className="text-slate-500 block mb-0.5">B/D Hours. Minutes:</span>
+                <p className="font-bold text-slate-900 dark:text-white">{report.breakdownHours || '—'}</p>
               </div>
               <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
                 <span className="text-slate-500 block mb-0.5">Diesel in Pump:</span>
@@ -469,7 +476,7 @@ export const ReportDetails = () => {
           {/* Section 3: Borehole Details */}
           <div>
             <h4 className={secHeadCls}>3. Borehole &amp; Bit Details</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <label className={labelCls}>Block Name</label>
                 <input
@@ -532,13 +539,26 @@ export const ReportDetails = () => {
                   className={inputCls}
                 />
               </div>
+              <div>
+                <label className={labelCls}>Drilling Type</label>
+                <select
+                  name="drillingType"
+                  value={editForm.drillingType || ''}
+                  onChange={handleEditChange}
+                  className={inputCls}
+                >
+                  <option value="">-- Select Drilling Type --</option>
+                  <option value="Coring">Coring</option>
+                  <option value="Non-Coring">Non-Coring</option>
+                </select>
+              </div>
             </div>
           </div>
 
           {/* Section 4: Operational Parameters & Field Remarks */}
           <div>
             <h4 className={secHeadCls}>4. Operational Parameters &amp; Field Remarks</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-3">
               <div>
                 <label className={labelCls}>Preventive Hrs (hrs)</label>
                 <input
@@ -549,6 +569,17 @@ export const ReportDetails = () => {
                   value={editForm.preventiveHours || ''}
                   onChange={handleEditChange}
                   placeholder="e.g. 1.50"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>B/D Hours. Minutes</label>
+                <input
+                  type="text"
+                  name="breakdownHours"
+                  value={editForm.breakdownHours || ''}
+                  onChange={handleEditChange}
+                  placeholder="e.g. 02.30"
                   className={inputCls}
                 />
               </div>

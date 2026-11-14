@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiService, apiClient } from '../services/api';
-import { Download, FileSpreadsheet, FileText, CheckCircle2, Calendar, Filter, RotateCcw, Layers, Sun } from 'lucide-react';
+import { Download, FileSpreadsheet, FileText, CheckCircle2, Calendar, Filter, RotateCcw, Layers, Sun, TrendingUp } from 'lucide-react';
 
 export const ExportCenter = () => {
   const [reportMode, setReportMode] = useState('standard'); // 'standard' | 'sundaywise'
@@ -80,11 +80,53 @@ export const ExportCenter = () => {
     setSelectedMonth(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`);
   };
 
+  const getFinancialYearStartDate = (dateStr) => {
+    if (!dateStr) return `${new Date().getFullYear()}-04-01`;
+    const [y, m] = dateStr.split('-').map(Number);
+    const fyYear = m >= 4 ? y : y - 1;
+    return `${fyYear}-04-01`;
+  };
+
+  const getMonthStartDate = (dateStr) => {
+    if (!dateStr) return `${new Date().toISOString().slice(0, 7)}-01`;
+    return `${dateStr.slice(0, 7)}-01`;
+  };
+
   const generateClientSideExport = async (type, params) => {
     try {
+      const targetDate = params?.toDate || params?.fromDate || new Date().toISOString().split('T')[0];
+      const fyStartDate = getFinancialYearStartDate(targetDate);
+      const monthStartDate = getMonthStartDate(targetDate);
+
+      // Fetch all reports in the financial year to date to accurately calculate cumulative progress
+      let fyReports = [];
+      try {
+        fyReports = await apiService.getReports({
+          campId: params?.campId,
+          status: params?.status,
+          fromDate: fyStartDate,
+          toDate: targetDate
+        });
+      } catch (e) {
+        console.warn('Could not fetch financial year reports:', e);
+      }
+
+      const machineMonthly = {};
+      const machineYearly = {};
+
+      fyReports.forEach(r => {
+        const machine = (r.machineNumber || 'RIG').trim().toUpperCase();
+        const rDate = r.reportDate || '';
+        const prog = parseFloat(r.dailyProgress) || 0;
+        machineYearly[machine] = (machineYearly[machine] || 0) + prog;
+        if (rDate >= monthStartDate && rDate <= targetDate) {
+          machineMonthly[machine] = (machineMonthly[machine] || 0) + prog;
+        }
+      });
+
       const allReports = await apiService.getReports(params);
 
-      const dprHeaders = '"Camp Name","RIG No.","Shift","Total Day Progress","Monthly Cummulative Meterage","Yearly Cummulative Meterage","Borehole ID","Borehole Start dt","Block Name","Remarks","Preventive Hrs","Working Hrs","Diesel in Pump(Ltrs)","Diesel in Rig(Ltrs)","Bit No"\n';
+      const dprHeaders = '"Camp Name","RIG No.","Shift","Total Day Progress","Monthly Cummulative Meterage","Yearly Cummulative Meterage","Borehole ID","Borehole Start dt","Block Name","BH Type","B/D Hours.Minutes","Remarks","Preventive Hrs","Working Hrs","Diesel in Pump(Ltrs)","Diesel in Rig(Ltrs)","Bit No"\n';
 
       if (reportMode === 'sundaywise') {
         const sundayReports = allReports.filter(r => {
@@ -100,28 +142,26 @@ export const ExportCenter = () => {
 
         let csvContent = '\uFEFF' + dprHeaders;
 
-        const machineMonthly = {};
-        const machineYearly = {};
+        const sundayMonthly = {};
+        const sundayYearly = {};
 
         sortedSundayReports.forEach(r => {
-          const machine = r.machineNumber || 'RIG';
-          const rDate = r.reportDate || '';
-          const monthKey = `${machine}_${rDate.slice(0, 7)}`;
-          const yearKey = `${machine}_${rDate.slice(0, 4)}`;
-
+          const machine = (r.machineNumber || 'RIG').trim().toUpperCase();
           const prog = parseFloat(r.dailyProgress) || 0;
-          machineMonthly[monthKey] = (machineMonthly[monthKey] || 0) + prog;
-          machineYearly[yearKey] = (machineYearly[yearKey] || 0) + prog;
+          sundayMonthly[machine] = (sundayMonthly[machine] || 0) + prog;
+          sundayYearly[machine] = (sundayYearly[machine] || 0) + prog;
 
-          const monthlyCum = machineMonthly[monthKey].toFixed(2);
-          const yearlyCum = machineYearly[yearKey].toFixed(2);
+          const monthlyCum = (machineMonthly[machine] || sundayMonthly[machine]).toFixed(2);
+          const yearlyCum = (machineYearly[machine] || sundayYearly[machine]).toFixed(2);
           const bhStartDate = r.boreholeStartDate
             ? r.boreholeStartDate.split('-').reverse().join('-')
             : '';
           const boreholeId = r.boreholeId || r.drillHole || '';
           const remarksClean = (r.remarks || '').replace(/"/g, '""');
 
-          csvContent += `"${r.campName || ''}","${r.machineNumber || ''}","${r.shift || ''}","${prog}","${monthlyCum}","${yearlyCum}","${boreholeId}","${bhStartDate}","${r.blockName || ''}","${remarksClean}","${r.preventiveHours || 0}","${r.workingHours || 0}","${r.dieselPump || 0}","${r.dieselRig || 0}","${r.bitNo || ''}"\n`;
+          const bhType = r.drillingType || 'C';
+          const bdHours = r.breakdownHours || '0.00';
+          csvContent += `"${r.campName || ''}","${r.machineNumber || ''}","${r.shift || ''}","${prog}","${monthlyCum}","${yearlyCum}","${boreholeId}","${bhStartDate}","${r.blockName || ''}","${bhType}","${bdHours}","${remarksClean}","${r.preventiveHours || 0}","${r.workingHours || 0}","${r.dieselPump || 0}","${r.dieselRig || 0}","${r.bitNo || ''}"\n`;
         });
 
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -153,28 +193,21 @@ export const ExportCenter = () => {
 
         let csvContent = '\uFEFF' + dprHeaders;
 
-        const machineMonthly = {};
-        const machineYearly = {};
-
         sortedReports.forEach(r => {
-          const machine = r.machineNumber || 'RIG';
-          const rDate = r.reportDate || '';
-          const monthKey = `${machine}_${rDate.slice(0, 7)}`;
-          const yearKey = `${machine}_${rDate.slice(0, 4)}`;
-
+          const machine = (r.machineNumber || 'RIG').trim().toUpperCase();
           const prog = parseFloat(r.dailyProgress) || 0;
-          machineMonthly[monthKey] = (machineMonthly[monthKey] || 0) + prog;
-          machineYearly[yearKey] = (machineYearly[yearKey] || 0) + prog;
 
-          const monthlyCum = machineMonthly[monthKey].toFixed(2);
-          const yearlyCum = machineYearly[yearKey].toFixed(2);
+          const monthlyCum = (machineMonthly[machine] != null ? machineMonthly[machine] : prog).toFixed(2);
+          const yearlyCum = (machineYearly[machine] != null ? machineYearly[machine] : prog).toFixed(2);
           const bhStartDate = r.boreholeStartDate
             ? r.boreholeStartDate.split('-').reverse().join('-')
             : '';
           const boreholeId = r.boreholeId || r.drillHole || '';
           const remarksClean = (r.remarks || '').replace(/"/g, '""');
 
-          csvContent += `"${r.campName || ''}","${r.machineNumber || ''}","${r.shift || ''}","${prog}","${monthlyCum}","${yearlyCum}","${boreholeId}","${bhStartDate}","${r.blockName || ''}","${remarksClean}","${r.preventiveHours || 0}","${r.workingHours || 0}","${r.dieselPump || 0}","${r.dieselRig || 0}","${r.bitNo || ''}"\n`;
+          const bhType = r.drillingType || 'C';
+          const bdHours = r.breakdownHours || '0.00';
+          csvContent += `"${r.campName || ''}","${r.machineNumber || ''}","${r.shift || ''}","${prog}","${monthlyCum}","${yearlyCum}","${boreholeId}","${bhStartDate}","${r.blockName || ''}","${bhType}","${bdHours}","${remarksClean}","${r.preventiveHours || 0}","${r.workingHours || 0}","${r.dieselPump || 0}","${r.dieselRig || 0}","${r.bitNo || ''}"\n`;
         });
 
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -194,109 +227,188 @@ export const ExportCenter = () => {
             if (dateDiff !== 0) return dateDiff;
             return (a.reportId || 0) - (b.reportId || 0);
           });
-          const machineMonthly = {};
-          const machineYearly = {};
+
+          // Group by Camp
+          const campNames = ['Anandwan Camp', 'Murpar Camp', 'Durgapur Camp'];
+          const campGroups = {};
+          campNames.forEach(c => { campGroups[c] = []; });
+
+          sortedReports.forEach(r => {
+            const cName = r.campName || 'Other Camp';
+            if (!campGroups[cName]) campGroups[cName] = [];
+            campGroups[cName].push(r);
+          });
+
+          const reportDateStr = toDate ? toDate.split('-').reverse().join('.') : (fromDate ? fromDate.split('-').reverse().join('.') : new Date().toLocaleDateString('en-GB').replace(/\//g, '.'));
+
+          let grandTotalDaily = 0;
+          let grandTotalMonthly = 0;
+          let grandTotalYearly = 0;
+          let grandTotalDiesel = 0;
+
+          const campBlocksHtml = Object.keys(campGroups).map(cName => {
+            const cReports = campGroups[cName];
+            if (campId && !cName.toLowerCase().includes(campId === '1' ? 'anandwan' : campId === '2' ? 'murpar' : 'durgapur')) {
+              return '';
+            }
+
+            const isDurgapur = cName.toLowerCase().includes('durgapur');
+            let campDaily = 0;
+            let campMonthly = 0;
+            let campYearly = 0;
+            let campPump = 0;
+            let campRig = 0;
+
+            const rowsHtml = cReports.map(r => {
+              const machine = (r.machineNumber || 'RIG').trim().toUpperCase();
+              const prog = parseFloat(r.dailyProgress) || 0;
+              const mCum = machineMonthly[machine] != null ? machineMonthly[machine] : prog;
+              const yCum = machineYearly[machine] != null ? machineYearly[machine] : prog;
+              const sh = (r.shift || '').toLowerCase();
+              const isShift2 = sh.includes('2nd') || sh.includes('night');
+              const shift1 = isShift2 ? 0 : prog;
+              const shift2 = isShift2 ? prog : 0;
+              const bhDepth = r.boreholeDepth != null ? parseFloat(r.boreholeDepth).toFixed(2) : '0.00';
+              const bhStartDate = r.boreholeStartDate ? r.boreholeStartDate.split('-').reverse().join('.') : '';
+              const bhId = r.boreholeId || r.drillHole || '';
+              const bhIdAndDate = bhStartDate ? `${bhId} / ${bhStartDate}` : bhId;
+              let bhType = r.drillingType || 'C';
+              if (bhType.toLowerCase() === 'coring') bhType = 'C';
+              const bdHours = r.breakdownHours || 'Nil hr';
+              const pump = parseFloat(r.dieselPump) || 0;
+              const rig = parseFloat(r.dieselRig) || 0;
+
+              campDaily += prog;
+              campMonthly += mCum;
+              campYearly += yCum;
+              campPump += pump;
+              campRig += rig;
+
+              return `
+                <tr>
+                  <td style="text-align: left; font-weight: 500;">${machine}</td>
+                  <td>${shift1.toFixed(2)}</td>
+                  <td>${shift2.toFixed(2)}</td>
+                  <td style="font-weight: bold;">${prog.toFixed(2)}</td>
+                  <td style="font-weight: bold;">${mCum.toFixed(2)}</td>
+                  <td style="font-weight: bold;">${yCum.toFixed(2)}</td>
+                  <td>${bhDepth}</td>
+                  <td>${bhIdAndDate}</td>
+                  <td style="text-align: left;">${r.blockName || ''}</td>
+                  <td>${bhType}</td>
+                  <td>${bdHours}</td>
+                  <td style="text-align: left;">${r.remarks || ''}</td>
+                  <td>${r.preventiveHours != null ? r.preventiveHours : '0.00'}</td>
+                  <td>${r.workingHours != null ? r.workingHours : '0.00'}</td>
+                  <td>${pump > 0 ? pump.toFixed(2) : '0.00'}</td>
+                  <td>${rig > 0 ? rig.toFixed(2) : '0.00'}</td>
+                  <td>${r.bitNo || '-'}</td>
+                </tr>
+              `;
+            }).join('');
+
+            grandTotalDaily += campDaily;
+            grandTotalMonthly += campMonthly;
+            grandTotalYearly += campYearly;
+            grandTotalDiesel += (campPump + campRig);
+
+            const isAnandwan = cName.toLowerCase().includes('anandwan');
+            const requirementNote = isAnandwan ? 'Requirement:- 300 nos. NQ drill rod, Pipe wrench 18",24" & 36"' : '';
+
+            return `
+              <!-- Header Row 1 -->
+              <tr class="camp-header">
+                <th style="width: 9%; text-align: left;">${cName}</th>
+                <th colspan="2" style="width: 7%;">Shift</th>
+                <th style="width: 5%;">Total (m)</th>
+                <th style="width: 6%;">Monthly Cumm.<br/>Meterage</th>
+                <th style="width: 6%;">Yearly Cumm.<br/>Meterage</th>
+                <th style="width: 4%;">BH<br/>Depth<br/>(m)</th>
+                <th style="width: 8.5%;">BH ID / Start dt</th>
+                <th style="width: 9.5%;">Block Name</th>
+                <th style="width: 4%;">BH Type</th>
+                <th style="width: 6%;">B/D Hours.Minutes</th>
+                <th style="width: 15%;">Remarks</th>
+                <th style="width: 4%;">Preventive<br/>Hrs</th>
+                <th style="width: 4%;">Working<br/>Hrs</th>
+                <th colspan="2" style="width: 7%;">Diesel (Ltrs)</th>
+                <th style="width: 6%;">Bit No</th>
+              </tr>
+              <!-- Header Row 2 -->
+              <tr class="sub-header">
+                <th></th>
+                <th>${isDurgapur ? '1ST SHIFT' : '12hr'}</th>
+                <th>${isDurgapur ? '2ND SHIFT' : ''}</th>
+                <th colspan="11"></th>
+                <th>Pump (Ltrs)</th>
+                <th>Rig (Ltrs)</th>
+                <th></th>
+              </tr>
+              <!-- Machine rows -->
+              ${rowsHtml}
+              <!-- Camp Total row -->
+              <tr class="camp-total">
+                <td style="font-weight: bold; text-align: center;">Total</td>
+                <td></td>
+                <td></td>
+                <td style="font-weight: bold;">${campDaily.toFixed(2)}</td>
+                <td style="font-weight: bold;">${campMonthly.toFixed(2)}</td>
+                <td style="font-weight: bold;">${campYearly.toFixed(2)}</td>
+                <td colspan="5"></td>
+                <td style="text-align: left; font-size: 8px;">${requirementNote}</td>
+                <td colspan="2"></td>
+                <td style="font-weight: bold;">${campPump > 0 ? campPump.toFixed(2) : ''}</td>
+                <td style="font-weight: bold;">${campRig > 0 ? campRig.toFixed(2) : ''}</td>
+                <td></td>
+              </tr>
+            `;
+          }).join('');
 
           const html = `
             <!DOCTYPE html>
             <html>
             <head>
-              <title>CMPDI Official Drilling Progress Report (DPR)</title>
+              <title>DRILLING PROGRESS OF RI-IV,NAGPUR</title>
               <style>
-                body { font-family: Arial, sans-serif; margin: 15px; color: #1e293b; font-size: 11px; }
-                .header { text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 12px; }
-                .header h1 { margin: 0; font-size: 16px; color: #0b2545; text-transform: uppercase; }
-                .header h2 { margin: 4px 0 0 0; font-size: 12px; color: #475569; }
-                .meta { display: flex; justify-content: space-between; margin-bottom: 12px; background: #f8fafc; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 10px; }
-                table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 9px; }
-                th, td { border: 1px solid #cbd5e1; padding: 4px 5px; text-align: center; }
-                th { background-color: #0b2545; color: #ffffff; font-weight: bold; font-size: 8px; }
-                tr:nth-child(even) { background-color: #f8fafc; }
-                .signature-section { margin-top: 40px; display: flex; justify-content: space-between; page-break-inside: avoid; }
-                .sig-box { width: 220px; text-align: center; border-top: 1px dashed #64748b; padding-top: 6px; font-weight: bold; font-size: 10px; color: #334155; }
+                @page { size: landscape; margin: 8mm; }
+                body { font-family: Arial, Helvetica, sans-serif; margin: 0; color: #000; font-size: 8.5px; }
+                .doc-title { text-align: center; font-weight: bold; font-size: 13px; text-transform: uppercase; margin-bottom: 2px; }
+                .doc-date { text-align: center; font-weight: bold; font-size: 10px; margin-bottom: 8px; }
+                table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+                th, td { border: 1px solid #000; padding: 2.5px 3px; text-align: center; font-size: 8px; line-height: 1.15; }
+                th { background-color: #fff; font-weight: bold; }
+                .camp-header th { font-size: 8px; font-weight: bold; background-color: #fff; }
+                .sub-header th { font-size: 7.5px; font-weight: bold; background-color: #fff; }
+                .camp-total td { font-weight: bold; background-color: #fff; }
+                .grand-total-row td { font-weight: bold; font-size: 8.5px; }
               </style>
             </head>
             <body>
-              <div class="header">
-                <h1>Central Mine Planning &amp; Design Institute Limited (CMPDI)</h1>
-                <h2>Exploration Department — Daily Drilling Progress Report (DPR Format)</h2>
-              </div>
-              <div class="meta">
-                <div>
-                  <strong>Report Range:</strong> ${fromDate || 'Start'} to ${toDate || 'End'}<br/>
-                  <strong>Camp:</strong> ${campId ? (campId === '1' ? 'Anandwan Camp' : campId === '2' ? 'Murpar Camp' : 'Durgapur Camp') : 'All Camps'}
-                </div>
-                <div>
-                  <strong>Status Filter:</strong> ${status || 'All Statuses'}<br/>
-                  <strong>Total Records:</strong> ${sortedReports.length}
-                </div>
-                <div>
-                  <strong>Generated On:</strong> ${new Date().toLocaleString()}<br/>
-                  <strong>Classification:</strong> Official CMPDI Record
-                </div>
-              </div>
+              <div class="doc-title">DRILLING PROGRESS OF RI-IV,NAGPUR</div>
+              <div class="doc-date">${reportDateStr}</div>
 
               <table>
-                <thead>
-                  <tr>
-                    <th>Camp Name</th>
-                    <th>RIG No.</th>
-                    <th>Shift</th>
-                    <th>Total Day Progress</th>
-                    <th>Monthly Cum.</th>
-                    <th>Yearly Cum.</th>
-                    <th>Borehole ID</th>
-                    <th>Start Date</th>
-                    <th>Block Name</th>
-                    <th>Remarks</th>
-                    <th>Prev. Hrs</th>
-                    <th>Work Hrs</th>
-                    <th>Diesel Pump (L)</th>
-                    <th>Diesel Rig (L)</th>
-                    <th>Bit No</th>
-                  </tr>
-                </thead>
                 <tbody>
-                  ${sortedReports.map(r => {
-                    const machine = r.machineNumber || 'RIG';
-                    const rDate = r.reportDate || '';
-                    const monthKey = `${machine}_${rDate.slice(0, 7)}`;
-                    const yearKey = `${machine}_${rDate.slice(0, 4)}`;
-                    const prog = parseFloat(r.dailyProgress) || 0;
-                    machineMonthly[monthKey] = (machineMonthly[monthKey] || 0) + prog;
-                    machineYearly[yearKey] = (machineYearly[yearKey] || 0) + prog;
-                    const bhStartDate = r.boreholeStartDate
-                      ? r.boreholeStartDate.split('-').reverse().join('-')
-                      : '';
-                    const boreholeId = r.boreholeId || r.drillHole || '';
-                    return `
-                      <tr>
-                        <td>${r.campName || ''}</td>
-                        <td>${r.machineNumber || ''}</td>
-                        <td>${r.shift || ''}</td>
-                        <td><strong>${prog.toFixed(2)}</strong></td>
-                        <td>${machineMonthly[monthKey].toFixed(2)}</td>
-                        <td>${machineYearly[yearKey].toFixed(2)}</td>
-                        <td>${boreholeId}</td>
-                        <td>${bhStartDate}</td>
-                        <td>${r.blockName || ''}</td>
-                        <td style="text-align: left;">${r.remarks || ''}</td>
-                        <td>${r.preventiveHours || 0}</td>
-                        <td>${r.workingHours || 0}</td>
-                        <td>${r.dieselPump || 0}</td>
-                        <td>${r.dieselRig || 0}</td>
-                        <td>${r.bitNo || '-'}</td>
-                      </tr>
-                    `;
-                  }).join('')}
+                  ${campBlocksHtml}
+                  <!-- Grand Total Row 1 -->
+                  <tr class="grand-total-row">
+                    <td colspan="4" style="font-weight: bold; text-align: center;">RI-IV, CMPDI, NAGPUR</td>
+                    <td style="font-weight: bold;">Monthly Cumm.<br/>Meterage</td>
+                    <td style="font-weight: bold;">Yearly Cumm.<br/>Meterage</td>
+                    <td colspan="11"></td>
+                  </tr>
+                  <!-- Grand Total Row 2 -->
+                  <tr class="grand-total-row">
+                    <td colspan="3" style="font-weight: bold; text-align: center;">TOTAL (m)</td>
+                    <td style="font-weight: bold;">${grandTotalDaily.toFixed(2)}</td>
+                    <td style="font-weight: bold;">${grandTotalMonthly.toFixed(2)}</td>
+                    <td style="font-weight: bold;">${grandTotalYearly.toFixed(2)}</td>
+                    <td colspan="8"></td>
+                    <td colspan="2" style="font-weight: bold;">${grandTotalDiesel.toFixed(0)}</td>
+                    <td></td>
+                  </tr>
                 </tbody>
               </table>
-
-              <div class="signature-section">
-                <div class="sig-box">Prepared by (Camp Executive)</div>
-                <div class="sig-box">Verified by (Senior Geologist)</div>
-                <div class="sig-box">Authorized Signatory (Dept Exec HQ)</div>
-              </div>
 
               <script>
                 window.onload = function() {
@@ -362,6 +474,36 @@ export const ExportCenter = () => {
       setTimeout(() => {
         setExportingFormat(null);
       }, 1000);
+    }
+  };
+
+  // Achievement Against Target — separate report
+  const handleAchievementDownload = async () => {
+    setExportingFormat('achievement');
+    setSuccessMsg('');
+    try {
+      const response = await apiClient.get('/export/achievement', {
+        params: { asOfDate: toDate || undefined },
+        responseType: 'blob'
+      });
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      const dateStr = toDate || new Date().toISOString().slice(0, 10);
+      link.setAttribute('download', `Achievement_Against_Target_RI-IV_${dateStr}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+      setSuccessMsg('Achievement Against Target report downloaded successfully!');
+    } catch (err) {
+      console.error('Achievement report download failed:', err);
+      setSuccessMsg('Failed to generate Achievement report. Please try again.');
+    } finally {
+      setTimeout(() => setExportingFormat(null), 1000);
     }
   };
 
@@ -605,46 +747,72 @@ export const ExportCenter = () => {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
-            {/* Excel Download Card */}
-            <div className="p-5 rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50/50 dark:bg-emerald-950/20 space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-lg bg-emerald-600 text-white shrink-0 shadow-xs">
-                  <FileSpreadsheet className="w-6 h-6" />
+          <div className="space-y-4 pt-4">
+            {/* Excel + PDF row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Excel Download Card */}
+              <div className="p-5 rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50/50 dark:bg-emerald-950/20 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-lg bg-emerald-600 text-white shrink-0 shadow-xs">
+                    <FileSpreadsheet className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white">Excel Workbook (.xlsx / .csv)</h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Strictly follows official DPR Format: 17 columns with cumulative meterage, borehole start date, block, remarks, preventive hours, diesel &amp; bit number.</p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">Excel Workbook (.xlsx / .csv)</h4>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Strictly follows official DPR Format: 15 columns with cumulative meterage, borehole start date, block, remarks, preventive hours, diesel &amp; bit number.</p>
-                </div>
+                <button
+                  onClick={() => handleDownload('excel')}
+                  disabled={!!exportingFormat}
+                  className="w-full py-2.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <Download className="w-4 h-4" />
+                  {exportingFormat === 'excel' ? 'Generating Excel Workbook...' : 'Export Excel Workbook'}
+                </button>
               </div>
-              <button
-                onClick={() => handleDownload('excel')}
-                disabled={!!exportingFormat}
-                className="w-full py-2.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                <Download className="w-4 h-4" />
-                {exportingFormat === 'excel' ? 'Generating Excel Workbook...' : 'Export Excel Workbook'}
-              </button>
+
+              {/* PDF Download Card */}
+              <div className="p-5 rounded-xl border border-rose-200 dark:border-rose-900 bg-rose-50/50 dark:bg-rose-950/20 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-lg bg-rose-600 text-white shrink-0 shadow-xs">
+                    <FileText className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white">PDF Official Register (.pdf)</h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Formatted with CMPDI letterhead, verification tables &amp; signature blocks</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleDownload('pdf')}
+                  disabled={!!exportingFormat}
+                  className="w-full py-2.5 text-xs font-bold rounded-lg bg-rose-600 hover:bg-rose-700 text-white shadow-xs transition flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <Download className="w-4 h-4" />
+                  {exportingFormat === 'pdf' ? 'Generating PDF Document...' : 'Download Official PDF Report'}
+                </button>
+              </div>
             </div>
 
-            {/* PDF Download Card */}
-            <div className="p-5 rounded-xl border border-rose-200 dark:border-rose-900 bg-rose-50/50 dark:bg-rose-950/20 space-y-3">
+            {/* Achievement Against Target Card */}
+            <div className="p-5 rounded-xl border border-indigo-200 dark:border-indigo-900 bg-indigo-50/50 dark:bg-indigo-950/20 space-y-3">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-lg bg-rose-600 text-white shrink-0 shadow-xs">
-                  <FileText className="w-6 h-6" />
+                <div className="p-2.5 rounded-lg bg-indigo-600 text-white shrink-0 shadow-xs">
+                  <TrendingUp className="w-6 h-6" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">PDF Official Register (.pdf)</h4>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Formatted with CMPDI letterhead, verification tables &amp; signature blocks</p>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">Achievement Against Target (.xlsx)</h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Standalone Excel report — each machine's FY target vs actual drilled meterage, with camp-wise SUB TOTALs and GRAND TOTAL. Financial Year (Apr – Mar).
+                  </p>
                 </div>
               </div>
               <button
-                onClick={() => handleDownload('pdf')}
+                onClick={handleAchievementDownload}
                 disabled={!!exportingFormat}
-                className="w-full py-2.5 text-xs font-bold rounded-lg bg-rose-600 hover:bg-rose-700 text-white shadow-xs transition flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full py-2.5 text-xs font-bold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 <Download className="w-4 h-4" />
-                {exportingFormat === 'pdf' ? 'Generating PDF Document...' : 'Download Official PDF Report'}
+                {exportingFormat === 'achievement' ? 'Generating Achievement Report...' : 'Download Achievement vs Target Report'}
               </button>
             </div>
           </div>

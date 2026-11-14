@@ -101,6 +101,12 @@ public class DailyDrillingReport {
     @Column(name = "preventive_hours", precision = 5, scale = 2)
     private BigDecimal preventiveHours;
 
+    @Column(name = "drilling_type", length = 30)
+    private String drillingType; // Coring, Non-Coring
+
+    @Column(name = "breakdown_hours", length = 30)
+    private String breakdownHours; // B/D Hours. Minutes
+
     @Column(name = "diesel_pump", precision = 8, scale = 2)
     private BigDecimal dieselPump;
 
